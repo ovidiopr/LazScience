@@ -6,7 +6,7 @@ It ships together with a companion unit, `uUnitParser` (`TUnitParser`), which do
 
 ## Features
 
-- **Free-form unit input** — type a number and a unit in one string (`"2.5 MPa"`, `"1/2 in"`, `"10 kg*m/s^2"`) and the control parses both parts.
+- **Free-form unit input** — type a number and a unit in one string (`"2.5 MPa"`, `"0.5 in"`, `"10 kg*m/s^2"`) and the control parses both parts.
 - **Compound unit expressions** — units can be combined with `*`, `/`, `^` and parentheses (e.g. `kg*m^2/s^3`, `W/(m^2*K)`).
 - **SI prefixes** — all standard prefixes from `q` (quecto, 1e-30) to `Q` (quetta, 1e30), including the `µ`/`u` alternate symbol and multi-letter `da` (deca).
 - **Dimensional family checking** — restrict the control to a physical quantity (length, pressure, energy, etc.) so incompatible units are rejected with a clear error state.
