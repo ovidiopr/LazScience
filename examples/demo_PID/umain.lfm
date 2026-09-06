@@ -1,0 +1,706 @@
+object Form1: TForm1
+  Left = 423
+  Height = 657
+  Top = 143
+  Width = 879
+  Caption = 'Heater simulator'
+  ClientHeight = 657
+  ClientWidth = 879
+  LCLVersion = '4.8.0.0'
+  object pnlInput: TPanel
+    Left = 568
+    Height = 657
+    Top = 0
+    Width = 311
+    Align = alRight
+    BevelOuter = bvNone
+    ClientHeight = 657
+    ClientWidth = 311
+    TabOrder = 0
+    object rgPIDType: TRadioGroup
+      Left = 0
+      Height = 45
+      Top = 183
+      Width = 311
+      Align = alTop
+      AutoFill = True
+      AutoSize = True
+      Caption = 'PID Type'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 2
+      ClientHeight = 18
+      ClientWidth = 301
+      Columns = 2
+      ItemIndex = 0
+      Items.Strings = (
+        'Parallel'
+        'Standard'
+      )
+      TabOrder = 3
+      OnSelectionChanged = rgPIDTypeSelectionChanged
+    end
+    object gbHeater: TGroupBox
+      Left = 1
+      Height = 181
+      Top = 1
+      Width = 309
+      Align = alTop
+      AutoSize = True
+      BorderSpacing.Around = 1
+      Caption = 'Heater conditions'
+      ClientHeight = 154
+      ClientWidth = 299
+      ParentFont = False
+      TabOrder = 0
+      object lblTamb: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seTamb
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = lblConvection
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 6
+        Width = 70
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'T ambient:'
+        ParentColor = False
+      end
+      object lblQMax: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seQMax
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = lblConvection
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 31
+        Width = 70
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'Heater:'
+        ParentColor = False
+      end
+      object lblConvection: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seConvection
+        AnchorSideTop.Side = asrCenter
+        Left = 2
+        Height = 16
+        Top = 56
+        Width = 72
+        Alignment = taRightJustify
+        BorderSpacing.Left = 2
+        Caption = 'Convection:'
+        ParentColor = False
+      end
+      object lblMass: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seMass
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = lblConvection
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 81
+        Width = 70
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'Mass:'
+        ParentColor = False
+      end
+      object lblCp: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seCp
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = lblConvection
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 106
+        Width = 70
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'Cp:'
+        ParentColor = False
+      end
+      object lblTnoise: TLabel
+        AnchorSideLeft.Control = gbHeater
+        AnchorSideTop.Control = seTnoise
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = lblConvection
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 131
+        Width = 70
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'T noise:'
+        ParentColor = False
+      end
+      object seTamb: TSciEdit
+        AnchorSideLeft.Control = lblTamb
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = gbHeater
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Hint = 'Temperature [K] (Equivalents: °C, °F, °R)'
+        Top = 4
+        Width = 217
+        Text = '25.0 °C'
+        PreferredUnits = '°C'
+        UnitFamily = ufTemperature
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 0
+      end
+      object seQMax: TSciEdit
+        AnchorSideLeft.Control = lblQMax
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seTamb
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Hint = 'Power [W] (Equivalents: J/s, V*A, kg*m^2/s^3, hp)'
+        Top = 29
+        Width = 217
+        Text = '10.0 kW'
+        PreferredUnits = 'kW'
+        UnitFamily = ufPower
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 1
+      end
+      object seConvection: TSciEdit
+        AnchorSideLeft.Control = lblConvection
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seQMax
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Top = 54
+        Width = 217
+        Text = '0.0200 kW/°C'
+        PreferredUnits = 'kW/°C'
+        UnitFamily = ufCustom
+        CustomUnits = 'kW/°C'
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 2
+      end
+      object seMass: TSciEdit
+        AnchorSideLeft.Control = lblMass
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seConvection
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Hint = 'Mass [kg] (Equivalents: g, lb, oz, t, u, Da)'
+        Top = 79
+        Width = 217
+        Text = '10.0 kg'
+        PreferredUnits = 'kg'
+        UnitFamily = ufMass
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 3
+      end
+      object seCp: TSciEdit
+        AnchorSideLeft.Control = lblCp
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seMass
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Top = 104
+        Width = 217
+        Text = '0.466 kJ/kg/°C'
+        PreferredUnits = 'kJ/kg/°C'
+        UnitFamily = ufCustom
+        CustomUnits = 'kJ/kg/°C'
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 4
+      end
+      object seTnoise: TSciEdit
+        AnchorSideLeft.Control = lblTnoise
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seCp
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbHeater
+        AnchorSideRight.Side = asrBottom
+        Left = 78
+        Height = 21
+        Hint = 'Temperature [K] (Equivalents: °C, °F, °R)'
+        Top = 129
+        Width = 217
+        Text = '1.00 °C'
+        PreferredUnits = '°C'
+        UnitFamily = ufTemperature
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 5
+      end
+    end
+    object gbPIDSettings: TGroupBox
+      Left = 0
+      Height = 133
+      Top = 228
+      Width = 311
+      Align = alTop
+      AutoSize = True
+      BorderSpacing.InnerBorder = 1
+      Caption = 'PID settings'
+      ClientHeight = 106
+      ClientWidth = 301
+      TabOrder = 1
+      object lblKp: TLabel
+        AnchorSideLeft.Control = gbPIDSettings
+        AnchorSideTop.Control = seKp
+        AnchorSideTop.Side = asrCenter
+        Left = 4
+        Height = 16
+        Top = 6
+        Width = 20
+        Alignment = taRightJustify
+        BorderSpacing.Left = 4
+        Caption = 'Kp:'
+        ParentColor = False
+      end
+      object lblKi: TLabel
+        AnchorSideLeft.Control = gbPIDSettings
+        AnchorSideTop.Control = seKi
+        AnchorSideRight.Control = lblKp
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 29
+        Width = 20
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        Caption = 'Ki:'
+        ParentColor = False
+      end
+      object lblKd: TLabel
+        AnchorSideLeft.Control = gbPIDSettings
+        AnchorSideTop.Control = seKd
+        AnchorSideTop.Side = asrCenter
+        Left = 4
+        Height = 16
+        Top = 56
+        Width = 20
+        Alignment = taRightJustify
+        BorderSpacing.Left = 4
+        Caption = 'Kd:'
+        ParentColor = False
+      end
+      object lblDerivativeFilterWeight: TLabel
+        AnchorSideLeft.Control = gbPIDSettings
+        AnchorSideTop.Control = seDerivativeFilterWeight
+        AnchorSideTop.Side = asrCenter
+        Left = 4
+        Height = 16
+        Top = 81
+        Width = 139
+        Alignment = taRightJustify
+        BorderSpacing.Left = 4
+        Caption = 'Derivative filter weight:'
+        ParentColor = False
+      end
+      object seDerivativeFilterWeight: TSciEdit
+        AnchorSideLeft.Control = lblDerivativeFilterWeight
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seKd
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbPIDSettings
+        AnchorSideRight.Side = asrBottom
+        Left = 147
+        Height = 21
+        Top = 79
+        Width = 150
+        Text = '0.80'
+        UnitFamily = ufNone
+        SignificantDigits = 2
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 3
+      end
+      object seKp: TSciEdit
+        AnchorSideLeft.Control = lblKp
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = gbPIDSettings
+        AnchorSideRight.Control = gbPIDSettings
+        AnchorSideRight.Side = asrBottom
+        Left = 28
+        Height = 21
+        Top = 4
+        Width = 269
+        Text = '0.07865 1/°C'
+        PreferredUnits = '1/°C'
+        UnitFamily = ufCustom
+        CustomUnits = '1/°C'
+        SignificantDigits = 4
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 0
+      end
+      object seKi: TSciEdit
+        AnchorSideLeft.Control = lblKi
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seKp
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbPIDSettings
+        AnchorSideRight.Side = asrBottom
+        Left = 28
+        Height = 21
+        Top = 29
+        Width = 269
+        Text = '0.003643 1/s/°C'
+        PreferredUnits = '1/s/°C'
+        UnitFamily = ufCustom
+        CustomUnits = '1/s/°C'
+        SignificantDigits = 4
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 1
+      end
+      object seKd: TSciEdit
+        AnchorSideLeft.Control = lblKd
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seKi
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbPIDSettings
+        AnchorSideRight.Side = asrBottom
+        Left = 28
+        Height = 21
+        Top = 54
+        Width = 269
+        Text = '0.1225 s/°C'
+        PreferredUnits = 's/°C'
+        UnitFamily = ufCustom
+        CustomUnits = 's/°C'
+        SignificantDigits = 4
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 2
+      end
+    end
+    object gbSimulation: TGroupBox
+      Left = 0
+      Height = 135
+      Top = 361
+      Width = 311
+      Align = alTop
+      AutoSize = True
+      Caption = 'Simulation'
+      ClientHeight = 108
+      ClientWidth = 301
+      TabOrder = 2
+      object lblSP: TLabel
+        AnchorSideLeft.Control = gbSimulation
+        AnchorSideTop.Control = seSP
+        AnchorSideTop.Side = asrCenter
+        Left = 4
+        Height = 16
+        Top = 6
+        Width = 55
+        Alignment = taRightJustify
+        BorderSpacing.Left = 4
+        Caption = 'Setpoint:'
+        ParentColor = False
+      end
+      object seSP: TSciEdit
+        AnchorSideLeft.Control = lblSP
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideRight.Control = gbSimulation
+        AnchorSideRight.Side = asrBottom
+        Left = 63
+        Height = 21
+        Hint = 'Temperature [K] (Equivalents: °C, °F, °R)'
+        Top = 4
+        Width = 234
+        Text = '222.0 °C'
+        PreferredUnits = '°C'
+        UnitFamily = ufTemperature
+        SignificantDigits = 4
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 0
+      end
+      object lblOutputSmooth: TLabel
+        AnchorSideLeft.Control = gbSimulation
+        AnchorSideTop.Control = seOutputSmooth
+        AnchorSideTop.Side = asrCenter
+        Left = 4
+        Height = 16
+        Top = 56
+        Width = 121
+        BorderSpacing.Left = 4
+        Caption = 'Output filter weight:'
+        ParentColor = False
+      end
+      object seOutputSmooth: TSciEdit
+        AnchorSideLeft.Control = lblOutputSmooth
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seRampingRate
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbSimulation
+        AnchorSideRight.Side = asrBottom
+        Left = 129
+        Height = 21
+        Top = 54
+        Width = 168
+        Text = '0.90'
+        UnitFamily = ufNone
+        SignificantDigits = 2
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        TabOrder = 2
+      end
+      object btnSimulate: TButton
+        AnchorSideTop.Control = btnAutotune
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = btnAutotune
+        Left = 34
+        Height = 25
+        Top = 79
+        Width = 140
+        Anchors = [akTop, akRight]
+        BorderSpacing.Around = 4
+        Caption = 'Simulate'
+        TabOrder = 3
+        OnClick = btnSimulateClick
+      end
+      object btnAutotune: TButton
+        AnchorSideTop.Control = seOutputSmooth
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbSimulation
+        AnchorSideRight.Side = asrBottom
+        Left = 178
+        Height = 25
+        Top = 79
+        Width = 119
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        Caption = 'Autotune'
+        TabOrder = 4
+        OnClick = TunePIDButtonClick
+      end
+      object seRampingRate: TSciEdit
+        AnchorSideLeft.Control = lblRampingRate
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seSP
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = gbSimulation
+        AnchorSideRight.Side = asrBottom
+        Left = 92
+        Height = 21
+        Top = 29
+        Width = 205
+        Text = '0.500 °C/s'
+        PreferredUnits = '°C/s'
+        UnitFamily = ufCustom
+        CustomUnits = '°C/s'
+        SignificantDigits = 3
+        Options = [seoScientificNotation, seoPreferredUnits]
+        TrackBarFactor = 2
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Around = 4
+        ParentFont = False
+        TabOrder = 1
+      end
+      object lblRampingRate: TLabel
+        AnchorSideLeft.Control = gbSimulation
+        AnchorSideTop.Control = seRampingRate
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 16
+        Top = 31
+        Width = 84
+        Alignment = taRightJustify
+        BorderSpacing.Left = 4
+        Caption = 'Ramping rate:'
+      end
+    end
+  end
+  object Chart1: TChart
+    Left = 0
+    Height = 657
+    Top = 0
+    Width = 568
+    AxisList = <    
+      item
+        Grid.Visible = False
+        Intervals.MaxLength = 100
+        Intervals.MinLength = 25
+        Intervals.Tolerance = 2
+        Margin = 8
+        Marks.LabelFont.Height = -16
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.UseMin = True
+        Title.Distance = 10
+        Title.LabelFont.Height = -16
+        Title.LabelFont.Orientation = 900
+        Title.LabelFont.Style = [fsBold]
+        Title.Visible = True
+        Title.Caption = 'SP, PV [°C]'
+        Title.LabelBrush.Style = bsClear
+        Transformations = LeftAxisTransformations
+      end    
+      item
+        Grid.Visible = False
+        Intervals.MaxLength = 100
+        Intervals.NiceSteps = '0.2|0.5|1.0|2|5|10|20|50|100'
+        Alignment = calBottom
+        Margin = 4
+        Marks.LabelFont.Height = -16
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Title.LabelFont.Height = -16
+        Title.LabelFont.Style = [fsBold]
+        Title.Visible = True
+        Title.Caption = 'Time, minutes'
+        Title.LabelBrush.Style = bsClear
+      end    
+      item
+        Grid.Visible = False
+        Intervals.MinLength = 25
+        Alignment = calRight
+        Marks.LabelFont.Height = -16
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.UseMin = True
+        Title.LabelFont.Height = -16
+        Title.LabelFont.Orientation = 900
+        Title.LabelFont.Style = [fsBold]
+        Title.Visible = True
+        Title.Caption = 'OP, %'
+        Title.LabelBrush.Style = bsClear
+        Transformations = RightAxisTransformations
+      end>
+    BackColor = clDefault
+    Legend.Alignment = laBottomCenter
+    Legend.ColumnCount = 4
+    Legend.Font.Height = -16
+    Legend.ItemFillOrder = lfoRowCol
+    Legend.Visible = True
+    Title.Text.Strings = (
+      'TAChart'
+    )
+    Align = alClient
+    object Chart1LineSeries1: TLineSeries
+      Title = 'PV'
+      AxisIndexX = 1
+      AxisIndexY = 0
+      LinePen.Color = clBlue
+    end
+    object Chart1LineSeries4: TLineSeries
+      Title = 'Tf'
+      AxisIndexX = 1
+      AxisIndexY = 0
+      LinePen.Color = clGreen
+    end
+    object Chart1LineSeries2: TLineSeries
+      Title = 'OP'
+      AxisIndexX = 1
+      AxisIndexY = 2
+      LinePen.Color = clRed
+    end
+    object Chart1LineSeries3: TLineSeries
+      Title = 'SP'
+      AxisIndexX = 1
+      AxisIndexY = 0
+      LinePen.Cosmetic = False
+      LinePen.Style = psDash
+    end
+  end
+  object LeftAxisTransformations: TChartAxisTransformations
+    Left = 176
+    Top = 16
+    object LeftAxisTransformationsAutoScaleAxisTransform1: TAutoScaleAxisTransform
+    end
+  end
+  object RightAxisTransformations: TChartAxisTransformations
+    Left = 144
+    Top = 16
+    object RightAxisTransformationsAutoScaleAxisTransform1: TAutoScaleAxisTransform
+    end
+  end
+  object SciPID1: TSciPID
+    Config.Kp = 1
+    Config.OutputMax = 1
+    Config.ILimit = 5
+    Config.DLimit = 0.5
+    Config.AntiWindupGain = 1
+    Config.DerivativeFilterCoeff = 0.8
+    Config.MaxDt = 1
+    Config.MinDt = 0.0001
+    Config.SetpointRampRate = 1
+    Config.MaxSetpointLead = 5
+    Config.AmbientGuess = 298.15
+    Config.HotStartWindow = 30
+    Autotune.QMax = 1
+    Autotune.TimeoutSeconds = 300
+    OnAutotuneComplete = OnPIDAutotuneComplete
+    Left = 88
+    Top = 16
+  end
+end

@@ -1,0 +1,904 @@
+object FTXTDialog: TFTXTDialog
+  Left = 204
+  Height = 552
+  Top = 191
+  Width = 970
+  BorderStyle = bsSizeToolWin
+  Caption = 'Spectra options'
+  ClientHeight = 552
+  ClientWidth = 970
+  Position = poMainFormCenter
+  LCLVersion = '4.8.0.0'
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  object pnTXTOptions: TPanel
+    Left = 0
+    Height = 39
+    Top = 0
+    Width = 970
+    Align = alTop
+    AutoSize = True
+    ClientHeight = 39
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 0
+    object DelimiterLbl: TLabel
+      AnchorSideLeft.Control = pnTXTOptions
+      AnchorSideTop.Control = cbbDelimiter
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 6
+      Height = 16
+      Top = 11
+      Width = 54
+      BorderSpacing.Left = 5
+      Caption = 'Delimiter'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbDelimiter: TComboBox
+      AnchorSideLeft.Control = DelimiterLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 65
+      Height = 19
+      Top = 10
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 0
+      OnChange = cbbDelimiterChange
+    end
+    object CommentLbl: TLabel
+      AnchorSideLeft.Control = cbbDelimiter
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cbbComment
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 108
+      Height = 16
+      Top = 11
+      Width = 59
+      BorderSpacing.Left = 5
+      Caption = 'Comment'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbComment: TComboBox
+      AnchorSideLeft.Control = CommentLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 172
+      Height = 19
+      Top = 10
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 1
+      OnChange = cbbCommentChange
+    end
+    object QuotationLbl: TLabel
+      AnchorSideLeft.Control = cbbComment
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cbbQuotation
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 215
+      Height = 16
+      Top = 11
+      Width = 60
+      BorderSpacing.Left = 5
+      Caption = 'Quotation'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbQuotation: TComboBox
+      AnchorSideLeft.Control = QuotationLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 280
+      Height = 19
+      Top = 10
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 2
+      OnChange = cbbQuotationChange
+    end
+    object HeaderLbl: TLabel
+      AnchorSideLeft.Control = cbbQuotation
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cbbQuotation
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 323
+      Height = 16
+      Top = 11
+      Width = 76
+      BorderSpacing.Left = 5
+      Caption = 'Header lines'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object btnLoad: TBitBtn
+      AnchorSideLeft.Control = txtHeader
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btnRefresh
+      Left = 476
+      Height = 27
+      Top = 6
+      Width = 72
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 5
+      Caption = 'Load'
+      Glyph.Data = {
+        36040000424D3604000000000000360000002800000010000000100000000100
+        20000000000000040000640000006400000000000000000000002C86D8D12D88
+        D8F72D87D8F72D88D8F72D88D8F72D88D8F72D88D8F72D88D8F72D88D8F72D88
+        D8F72D88D8F72D87D8F72D88D8F72C86D8D1FFFFFF00FFFFFF00338ED9FBDCF0
+        FAFF98E1F6FF95E0F6FF92DFF6FF8EDEF5FF89DCF5FF85DAF4FF80D9F4FF7AD7
+        F3FF74D5F3FF70D3F2FFC2EAF8FF3594DAFFFFFFFF00FFFFFF003594DAF7EFFA
+        FEFF93E5F8FF8FE4F8FF89E3F8FF82E1F7FF7ADFF7FF71DEF6FF67DBF5FF5BD8
+        F4FF4DD4F3FF40D1F2FFCAF2FBFF3594DAFFFFFFFF00FFFFFF00369ADAF8F2FA
+        FDFF94E6F8FF92E5F8FF90E5F8FF8BE3F8FF86E2F7FF7FE1F7FF77DEF6FF6CDC
+        F6FF5ED9F4FF4FD5F3FFCCF2FBFF3594DAFFFFFFFF00FFFFFF0036A1DAF9F6FC
+        FEFF94E5F8FF93E5F8FF93E5F8FF91E5F8FF93DBE9FF93D7E3FF93D2DCFF90CE
+        D7FF8CC8CFFF86C1C6FFC9D8D6FF3594DAFFC57444E8CA7F53F137A6DAFAFEFF
+        FFFFF8FDFFFFF6FDFFFFF5FCFFFFF3FCFEFF9AE4F4FF9AE6F7FF9BE6F6FF9DE5
+        F5FF9EE5F5FF9FE5F4FFDAF3F8FF3594DAFFFDF4EEFFCA8054F935ABDAFAE8F6
+        FBFF70BCE7FF55AAE2FF4DA5E0FF91C9EBFFFAF3EFFFFDFEFDFFFFFDFCFFFFFD
+        FCFFFEFDFCFFFEFCFBFFFEFEFDFF3594DAFFEFF2E8FFCE8156FF36AADAF2F1FA
+        FDFF94DEF5FF93DCF4FF64BCE9FF3594DAFF3594DAFF3594DAFF3594DAFF3594
+        DAFF3594DAFF3594DAFF3594DAFF3594DAFFFBF6EFFFCC8355FE35AFDAF0F7FC
+        FEFF8EE4F8FF91DEF5FF9FE0F5FFACE1F6FFCA8452FFFFF7F1FFFFE9D9FFFFEA
+        DBFFFFE9D9FFFFE7D7FFFFE5D2FFFFE2CBFFFFF7F1FFCB8555FE36B3DAF8FDFE
+        FEFFFEFFFFFFFEFEFFFFFDFEFFFFFEFFFFFFE4BA91FFFFF7F0FFFFE7D5FFFDE7
+        D6FFFDE6D4FFFCE4D0FFFBE3CBFFFADCC2FFFEF3E8FFCC8656FE34B4D9D05EC2
+        E1FA60C3E2FA60C3E2FA60C3E2FA5FC3E2FAE4BB91FFFFF7F2FFFEE7D5FFFEE7
+        D5FFFDE5D1FFFAE0CAFFF9DEC4FFF7D9BCFFFDF2E7FFCC8757FEFFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00E4BB92FFFEF7F1FFFCE5D2FFFCE4
+        D1FFFBE2CCFFF9DDC4FFF6D7BBFFF3D1AFFFFAEFE4FFCC8758FEFFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00E4BB92FFFEF6F0FFFCE2CDFFFCE3
+        CDFFFADFC8FFF7D9BCFFF5E9DDFFFAF3EBFFFBF8F3FFCA8353FEFFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00E4BB93FFFEF5EDFFFCDEC5FFFBE0
+        C7FFF9DCC2FFF5D3B4FFFEF9F3FFFAE2C4FFECC193FFC37D4893FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00E5BE96FFFFFFFEFFFDF3E9FFFDF3
+        EAFFFCF2E8FFFAEFE3FFFAF2E7FFEABB88FFCF8555B3B4693D0CFFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00EAC39DFFE6BF96FFE4BB92FFE4BB
+        92FFD1A06CF5D09E6DF6CC965FDAC479427EB2673C09FFFFFF00
+      }
+      ParentFont = False
+      TabOrder = 4
+      OnClick = btnLoadClick
+    end
+    object btnRefresh: TBitBtn
+      AnchorSideLeft.Control = btnLoad
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 553
+      Height = 27
+      Top = 6
+      Width = 88
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 5
+      Caption = 'Refresh'
+      Glyph.Data = {
+        36040000424D3604000000000000360000002800000010000000100000000100
+        2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00286E2D03256929AAFFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF002D7533C0296F2ED2FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF0038833EB9569D5EFF53995AFF2A712FFF266B2BFF2366
+        27FF206223C01D5E2040FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF0042924AE960A768FF8DCD97FF8ACB94FF87CA91FF84C98EFF81C8
+        8CFF60A768FF206324CC1D5F2140FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF0043944BBB62A96AFF5DA465FF35803BFF317A36FF5197
+        58FF82C88DFF5BA163FF21642599FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF004EA25709499C520245954CC2408F47D2FFFFFF00FFFFFF00327B
+        38C22D7533FF296F2EFF256A2AE0FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0046974EACFFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF0050A65903FFFFFF00FFFFFF0042924AAC3D8C
+        4503FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF0061BD6CE05DB868FF5AB364FF56AD5FC2FFFFFF00FFFFFF00489A50D24394
+        4BC23F8D46023A874109FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF0065C270998ECF97FFAAD9B1FF7AC383FF57AF61FF52A95CFF6FB778FF6BB3
+        74FF45954CBBFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF0068C6734065C371CC94D29CFFABDAB2FFA8D9AFFFA5D8ADFFA2D6AAFF9FD5
+        A7FF6CB474FF46974EDCFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF0068C7744066C472C063C06FFF60BC6BFF5DB767FF79C282FF75BE
+        7EFF50A659B9FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF005DB868D25AB3
+        64C0FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0062BE6DAA5EB9
+        6903FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
+      }
+      ParentFont = False
+      TabOrder = 5
+      OnClick = btnRefreshClick
+    end
+    object txtHeader: TSpinEdit
+      AnchorSideLeft.Control = HeaderLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnTXTOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 404
+      Height = 20
+      Top = 9
+      Width = 67
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      MaxValue = 100000
+      ParentFont = False
+      TabOrder = 3
+      OnChange = txtHeaderChange
+    end
+    object btnMenu: TBitBtn
+      AnchorSideLeft.Control = btnRefresh
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = btnRefresh
+      AnchorSideTop.Side = asrCenter
+      Left = 646
+      Height = 27
+      Top = 6
+      Width = 145
+      AutoSize = True
+      Caption = 'Set selection as...'
+      Enabled = False
+      Glyph.Data = {
+        36040000424D3604000000000000360000002800000010000000100000000100
+        20000000000000040000000000000000000000000000000000003E723B003E72
+        3B003E723B003E723B003E723B003E713B233A7839D5328032D3348435D33B7B
+        3AD53E713B233E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B003F6E3C2C338933FF11A719FF1EBA2BFF3896
+        3CFF3E6C3B2C3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B00416A3E2A299E2AFF00C111FF08FC22FF37BA
+        40FF3F663A2A3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B00416A3E2A2A9D2AFF00C711FF11F528FF3AB5
+        41FF3E663A2A3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B00416C3E232A9A2AFF00BC10FF09EE21FF37B2
+        3EFF3F673B233E723B003E723B003E723B003E723B003E723B003F723C22416F
+        3D2C446C402A446B402A446A3F2A4864444C309130FD00A80CFF00D416FF2DA6
+        35FD3E5F394C3A68372A3A68362A3A68362A3C6D382C3D713A22387637D62882
+        29FF15921CFF15991DFF149F1DFF169E1EFF0DA413FB008608FF00B711FF31BF
+        3CFB4DA64EFF4FAD53FF51AE54FF52AF56FF489148FF3F793ED6317630D40B87
+        10FF009503FF00B012FF00C813FF00CE13FF00C412FF0FA61EFF20A52EFF2EC9
+        3BFF3DE34CFF4AE958FF50EB5FFF54EF64FF4CB152FF408240D4317B31D412A0
+        1AFF00E415FF27FD3DFF52FF62FF60FF70FF44F956FF2FD73DFF2EB13BFF3CB0
+        47FF44C751FF4ED15BFF56D363FF63D670FF55A55AFF437E43D43A7A39D63595
+        39FF3DBE45FF56BE5BFF69BB6DFF66B469FF5EE668FB4EF660FF3FD64EFF52B4
+        59FB509753FF57A05BFF5CA25FFF62A565FF528D52FF417940D63E713B223F6C
+        3B2C3E653A2A3966352A3766332A31592D4C5FB562FD74FF80FF52E961FF50A5
+        51FD3862334C396B362A396A352A386A342A3B6D372C3D713A223E723B003E72
+        3B003E723B003E723B003E723B003766342360BC64FF78FF86FF5FE86BFF55A7
+        58FF3A6836233E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B003866342A5DBA5EFF6DFC79FF67DE70FF5BA4
+        5CFF386A352A3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B003866342A5CB65FFF72F67FFF7CDC85FF64A6
+        65FF3769332A3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B003B6D382C4D904DFF61B565FF68AE6BFF528D
+        52FF3A6E372C3E723B003E723B003E723B003E723B003E723B003E723B003E72
+        3B003E723B003E723B003E723B003D713A2342793FD5478346D34A8247D34379
+        40D53D713A233E723B003E723B003E723B003E723B003E723B00
+      }
+      PopupMenu = pmSelectChar
+      TabOrder = 6
+      OnClick = btnMenuClick
+    end
+  end
+  object Splitter: TSplitter
+    Left = 425
+    Height = 405
+    Top = 102
+    Width = 5
+  end
+  object LeftPanel: TPanel
+    Left = 0
+    Height = 405
+    Top = 102
+    Width = 425
+    Align = alLeft
+    BevelOuter = bvNone
+    ClientHeight = 405
+    ClientWidth = 425
+    ParentFont = False
+    TabOrder = 2
+    object lblSource: TLabel
+      Left = 5
+      Height = 16
+      Top = 5
+      Width = 415
+      Align = alTop
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      Caption = 'Source'
+      ParentColor = False
+      ParentFont = False
+    end
+    object mmSource: TMemo
+      Left = 0
+      Height = 384
+      Top = 21
+      Width = 425
+      Align = alClient
+      Constraints.MinHeight = 10
+      ParentFont = False
+      PopupMenu = pmSelectChar
+      ScrollBars = ssVertical
+      TabOrder = 0
+      OnKeyUp = mmSourceKeyUp
+      OnMouseUp = mmSourceMouseUp
+    end
+  end
+  object RightPanel: TPanel
+    Left = 430
+    Height = 405
+    Top = 102
+    Width = 540
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 405
+    ClientWidth = 540
+    ParentFont = False
+    TabOrder = 3
+    object lblData: TLabel
+      Left = 5
+      Height = 16
+      Top = 5
+      Width = 530
+      Align = alTop
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      Caption = 'Data'
+      ParentColor = False
+      ParentFont = False
+    end
+    object sgView: TStringGrid
+      Left = 0
+      Height = 384
+      Top = 21
+      Width = 540
+      Align = alClient
+      Anchors = []
+      ColCount = 1
+      Constraints.MinHeight = 10
+      DefaultColWidth = 100
+      FixedCols = 0
+      FixedRows = 0
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected, goRowSizing, goColSizing, goThumbTracking, goSmoothScroll]
+      ParentFont = False
+      RowCount = 1
+      TabOrder = 0
+    end
+  end
+  object pnButtons: TPanel
+    Left = 0
+    Height = 45
+    Top = 507
+    Width = 970
+    Align = alBottom
+    ClientHeight = 45
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 4
+    object btnAccept: TBitBtn
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnButtons
+      AnchorSideRight.Control = btnCancel
+      AnchorSideBottom.Control = pnButtons
+      AnchorSideBottom.Side = asrBottom
+      Left = 799
+      Height = 33
+      Top = 6
+      Width = 77
+      Anchors = [akTop, akRight, akBottom]
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 5
+      Caption = '&Acept'
+      Kind = bkOK
+      ModalResult = 1
+      ParentFont = False
+      TabOrder = 0
+    end
+    object btnCancel: TBitBtn
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnButtons
+      AnchorSideRight.Control = pnButtons
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = pnButtons
+      AnchorSideBottom.Side = asrBottom
+      Left = 881
+      Height = 33
+      Top = 6
+      Width = 83
+      Anchors = [akTop, akRight, akBottom]
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 5
+      Cancel = True
+      Caption = 'Cancel'
+      Kind = bkCancel
+      ModalResult = 2
+      ParentFont = False
+      TabOrder = 1
+    end
+    object lblError: TLabel
+      AnchorSideLeft.Control = pnButtons
+      AnchorSideTop.Control = pnButtons
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btnAccept
+      Left = 5
+      Height = 16
+      Top = 14
+      Width = 789
+      Anchors = [akTop, akLeft, akRight]
+      AutoSize = False
+      BorderSpacing.Around = 4
+      Font.Color = clRed
+      ParentFont = False
+    end
+  end
+  object pnFmtOptions: TPanel
+    Left = 0
+    Height = 31
+    Top = 39
+    Width = 970
+    Align = alTop
+    AutoSize = True
+    ClientHeight = 31
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 1
+    object DecimalLbl: TLabel
+      AnchorSideLeft.Control = pnFmtOptions
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 6
+      Height = 16
+      Top = 7
+      Width = 110
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Decimal separator'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbDecimal: TComboBox
+      AnchorSideLeft.Control = DecimalLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 121
+      Height = 19
+      Top = 6
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 0
+      OnChange = cbbDecimalChange
+    end
+    object XColLbl: TLabel
+      AnchorSideLeft.Control = cbbThousand
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 334
+      Height = 16
+      Top = 7
+      Width = 57
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'X column'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbXCol: TComboBox
+      AnchorSideLeft.Control = XColLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 396
+      Height = 19
+      Top = 6
+      Width = 42
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ItemIndex = 0
+      Items.Strings = (
+        '0'
+        '1'
+      )
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 2
+      Text = '0'
+    end
+    object YColLbl: TLabel
+      AnchorSideLeft.Control = txtXLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 584
+      Height = 16
+      Top = 7
+      Width = 56
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Y column'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbYCol: TComboBox
+      AnchorSideLeft.Control = YColLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 645
+      Height = 19
+      Top = 6
+      Width = 42
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ItemIndex = 1
+      Items.Strings = (
+        '0'
+        '1'
+      )
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 3
+      Text = '1'
+    end
+    object ThousandLbl: TLabel
+      AnchorSideLeft.Control = cbbDecimal
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 164
+      Height = 16
+      Top = 7
+      Width = 122
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Thousand separator'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbThousand: TComboBox
+      AnchorSideLeft.Control = ThousandLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 291
+      Height = 19
+      Top = 6
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 1
+      OnChange = cbbThousandChange
+    end
+    object XLblLbl: TLabel
+      AnchorSideLeft.Control = cbbXCol
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 443
+      Height = 16
+      Top = 7
+      Width = 41
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'X label'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object txtXLbl: TEdit
+      AnchorSideLeft.Control = XLblLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 489
+      Height = 21
+      Top = 5
+      Width = 90
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      ParentFont = False
+      TabOrder = 4
+      Text = 'X'
+    end
+    object YLblLbl: TLabel
+      AnchorSideLeft.Control = cbbYCol
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 692
+      Height = 16
+      Top = 7
+      Width = 41
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Y label'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object txtYLbl: TEdit
+      AnchorSideLeft.Control = YLblLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 738
+      Height = 21
+      Top = 5
+      Width = 90
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      ParentFont = False
+      TabOrder = 5
+      Text = 'Y'
+    end
+  end
+  object pnDatTimOptions: TPanel
+    Left = 0
+    Height = 32
+    Top = 70
+    Width = 970
+    Align = alTop
+    AutoSize = True
+    ClientHeight = 32
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 6
+    object DateLbl: TLabel
+      AnchorSideLeft.Control = pnDatTimOptions
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 6
+      Height = 16
+      Top = 8
+      Width = 90
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Date separator'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbDate: TComboBox
+      AnchorSideLeft.Control = DateLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 101
+      Height = 19
+      Top = 7
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 0
+    end
+    object TimeLbl: TLabel
+      AnchorSideLeft.Control = cbbDate
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 144
+      Height = 16
+      Top = 8
+      Width = 91
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Time separator'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object cbbTime: TComboBox
+      AnchorSideLeft.Control = TimeLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 240
+      Height = 19
+      Top = 7
+      Width = 38
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      ItemHeight = 15
+      ParentFont = False
+      Style = csDropDownList
+      TabOrder = 1
+    end
+    object DateTimeFmtLbl: TLabel
+      AnchorSideLeft.Control = cbbTime
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 283
+      Height = 16
+      Top = 8
+      Width = 43
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Format'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object txtDateTimeFmt: TEdit
+      AnchorSideLeft.Control = DateTimeFmtLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnDatTimOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 331
+      Height = 21
+      Top = 6
+      Width = 180
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      ParentFont = False
+      TabOrder = 2
+      Text = 'dd/mm/yyyy, hh:nn:ss'
+    end
+    object btnResetDateTime: TBitBtn
+      AnchorSideLeft.Control = txtDateTimeFmt
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = txtDateTimeFmt
+      AnchorSideTop.Side = asrCenter
+      Left = 516
+      Height = 27
+      Top = 3
+      Width = 138
+      AutoSize = True
+      BorderSpacing.Left = 5
+      Caption = 'Reset Date/Time'
+      Glyph.Data = {
+        36040000424D3604000000000000360000002800000010000000100000000100
+        2000000000000004000000000000000000000000000000000000FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000019FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFFFF000000FF000000FF000000FF000000FF0000
+        00FF000000FF000000FF000000FF000000FF000000FF00000032FFFFFF00FFFF
+        FF00FFFFFF00FFFFFFFF000000FF000000FF000000FF000000FF000000FF0000
+        00FF000000FF000000FF000000FF000000FF000000FF00000032FFFFFF00FFFF
+        FF00FFFFFFFF000000FF000000FF000000FFFFFFFFFFFFFFFFFF000000FF0000
+        00FF000000FFFFFFFFFFFFFFFFFF000000FF000000FF00000032FFFFFF00FFFF
+        FFFF000000FF000000FF000000FF000000FFFFFFFFFFFFFFFFFFFFFFFFFF0000
+        00FFFFFFFFFFFFFFFFFFFFFFFFFF000000FF000000FF00000032FFFFFFFF0000
+        00FF000000FF000000FF000000FF000000FF000000FFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFF000000FF000000FF000000FF00000032000000FF1818
+        18FF181818FF181818FF181818FF181818FF181818FF000000FFFFFFFFFFFFFF
+        FFFFFFFFFFFF000000FF181818FF181818FF000000FF00000032000000190000
+        00FF404040FF404040FF404040FF404040FF2D2D2DFFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFF2D2D2DFF404040FF000000FF00000032FFFFFF000000
+        0019000000FF696969FF696969FF5A5A5AFFFFFFFFFFFFFFFFFFFFFFFFFF5A5A
+        5AFFFFFFFFFFFFFFFFFFFFFFFFFF5A5A5AFF000000FF00000032FFFFFF00FFFF
+        FF0000000019000000FF939393FF888888FFFFFFFFFFFFFFFFFF888888FF9393
+        93FF888888FFFFFFFFFFFFFFFFFF888888FF000000FF00000032FFFFFF00FFFF
+        FF00FFFFFF0000000019000000FFBDBDBDFFBDBDBDFFB7B7B7FFB7B7B7FFBDBD
+        BDFFB7B7B7FFB7B7B7FFBDBDBDFFCFCFCFFF000000FF00000032FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF0000000019000000FF000000FF000000FF000000FF0000
+        00FF000000FF000000FF000000FF000000FF000000FF00000032FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00000000320000003200000032000000320000
+        0032000000320000003200000032000000320000003200000046FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
+        FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
+      }
+      TabOrder = 3
+      OnClick = btnResetDateTimeClick
+    end
+  end
+  object pmSelectChar: TPopupMenu
+    Left = 88
+    Top = 88
+    object miSetAsDelimiter: TMenuItem
+      Caption = 'Delimiter'
+      OnClick = miSetAsDelimiterClick
+    end
+    object miSetAsComment: TMenuItem
+      Caption = 'Comment'
+      OnClick = miSetAsCommentClick
+    end
+    object miSetAsQuotation: TMenuItem
+      Caption = 'Quotation'
+      OnClick = miSetAsQuotationClick
+    end
+    object miSetAsDecimal: TMenuItem
+      Caption = 'Decimal separator'
+      OnClick = miSetAsDecimalClick
+    end
+    object miSetAsThousand: TMenuItem
+      Caption = 'Thousand separator'
+      OnClick = miSetAsThousandClick
+    end
+    object miSetAsDateSeparator: TMenuItem
+      Caption = 'Date separator'
+      OnClick = miSetAsDateSeparatorClick
+    end
+    object miSetAsTimeSeparator: TMenuItem
+      Caption = 'Time separator'
+      OnClick = miSetAsTimeSeparatorClick
+    end
+    object miSetAsDateTime: TMenuItem
+      Caption = 'Date/Time'
+      OnClick = miSetAsDateTimeClick
+    end
+  end
+end

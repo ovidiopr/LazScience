@@ -1,0 +1,69 @@
+object Form1: TForm1
+  Left = 450
+  Height = 220
+  Top = 250
+  Width = 350
+  Caption = 'Universal Unit Converter'
+  ClientHeight = 220
+  ClientWidth = 350
+  Position = poScreenCenter
+  LCLVersion = '4.8.0.0'
+  OnCreate = FormCreate
+  object lblInput: TLabel
+    Left = 24
+    Height = 16
+    Top = 24
+    Width = 72
+    Caption = 'Input Value:'
+  end
+  object edInput: TSciEdit
+    Left = 112
+    Height = 21
+    Top = 20
+    Width = 200
+    TrackBarFactor = 2
+    OnValueChanged = edInputValueChanged
+    TabOrder = 0
+  end
+  object lblTarget: TLabel
+    Left = 24
+    Height = 16
+    Top = 72
+    Width = 71
+    Caption = 'Target Unit:'
+  end
+  object cbTargetUnit: TComboBox
+    Left = 112
+    Height = 20
+    Top = 68
+    Width = 200
+    ItemHeight = 18
+    TabOrder = 1
+    OnEditingDone = cbTargetUnitEditingDone
+  end
+  object lblOutput: TLabel
+    Left = 24
+    Height = 16
+    Top = 120
+    Width = 78
+    Caption = 'Result Value:'
+  end
+  object edOutput: TSciEdit
+    Left = 112
+    Height = 21
+    Top = 116
+    Width = 200
+    TrackBarFactor = 2
+    TabOrder = 2
+  end
+  object lblError: TLabel
+    Left = 24
+    Height = 15
+    Top = 168
+    Width = 288
+    AutoSize = False
+    Font.Color = clRed
+    ParentFont = False
+    WordWrap = True
+  end
+end

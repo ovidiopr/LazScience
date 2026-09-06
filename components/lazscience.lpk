@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="5">
+    <PathDelim Value="\"/>
+    <Name Value="LazScience"/>
+    <Type Value="RunAndDesignTime"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+    </CompilerOptions>
+    <Files>
+      <Item>
+        <Filename Value="usciedit.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciEdit"/>
+      </Item>
+      <Item>
+        <Filename Value="uscipid.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uscipid"/>
+      </Item>
+      <Item>
+        <Filename Value="uscireader.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciReader"/>
+      </Item>
+      <Item>
+        <Filename Value="uscireaderdlg.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciReaderDlg"/>
+      </Item>
+    </Files>
+    <RequiredPkgs>
+      <Item>
+        <PackageName Value="LCLBase"/>
+      </Item>
+      <Item>
+        <PackageName Value="FCL"/>
+      </Item>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <UseFileFilters Value="True"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>
