@@ -6,12 +6,12 @@ All components install into a **Science** tab on the component palette and are d
 
 ## Components
 
-| Component | Unit | Description |
-|---|---|---|
-| **`TSciEdit`** | `uSciEdit.pas` | A unit-aware numeric edit control. Type a number and a unit in one string (`"2.5 MPa"`, `"20 °C"`, `"10 kg*m/s^2"`) and it parses, validates, converts between units, and auto-formats the result — with SI-prefix handling, 26 built-in physical-quantity families, custom units, and optional `TTrackBar` binding for slider-style scrubbing. See **[TSCIEDIT.md](TSCIEDIT.md)**. |
-| **`TSciPID`** | `uSciPID.pas` | A thread-safe PID controller: proportional/integral/derivative/feed-forward control, selectable anti-windup and derivative-filtering strategies, output rate limiting, setpoint ramping, and a per-cycle safety-status report. Includes a relay-feedback (Åström–Hägglund) **autotuner** that measures the plant and computes tuning gains automatically, transparently layered on the same update loop. See **[TSCIPID.md](TSCIPID.md)**. |
-| **`TSciReader`** | `uSciReader.pas` | A non-visual component that parses delimited text data files (instrument logs, CSV/TSV exports, etc.) into rows/columns of cells and numeric values, with configurable delimiter, comment, quoting, header-skipping, decimal-style, and an embedded file-timestamp extractor. See **[TSCIREADER.md](TSCIREADER.md)**. |
-| **`TSciReaderDlg`** | `uSciReaderDlg.pas` | An interactive file-format dialog: lets the user pick a file, choose its delimiter/comment/decimal/date-time characters while watching a live parse preview, and loads the result straight into a linked `TSciReader`. Documented together with `TSciReader`, since the two are normally used as a pair. See **[TSCIREADER.md](TSCIREADER.md)**. |
+| Logo | Component | Unit | Description |
+|---|---|---|---|
+| ![TSciEdit](images/TSciEdit_200.png) | **`TSciEdit`** | `uSciEdit.pas` | A unit-aware numeric edit control. Type a number and a unit in one string (`"2.5 MPa"`, `"20 °C"`, `"10 kg*m/s^2"`) and it parses, validates, converts between units, and auto-formats the result — with SI-prefix handling, 26 built-in physical-quantity families, custom units, and optional `TTrackBar` binding for slider-style scrubbing. See **[TSCIEDIT.md](TSCIEDIT.md)**. |
+| ![TSciPID](images/TSciPID_200.png) | **`TSciPID`** | `uSciPID.pas` | A thread-safe PID controller: proportional/integral/derivative/feed-forward control, selectable anti-windup and derivative-filtering strategies, output rate limiting, setpoint ramping, and a per-cycle safety-status report. Includes a relay-feedback (Åström–Hägglund) **autotuner** that measures the plant and computes tuning gains automatically, transparently layered on the same update loop. See **[TSCIPID.md](TSCIPID.md)**. |
+| ![TSciReader](images/TSciReader_200.png) | **`TSciReader`** | `uSciReader.pas` | A non-visual component that parses delimited text data files (instrument logs, CSV/TSV exports, etc.) into rows/columns of cells and numeric values, with configurable delimiter, comment, quoting, header-skipping, decimal-style, and an embedded file-timestamp extractor. See **[TSCIREADER.md](TSCIREADER.md)**. |
+| ![TSciReaderDlg](images/TSciReaderDlg_200.png) | **`TSciReaderDlg`** | `uSciReaderDlg.pas` | An interactive file-format dialog: lets the user pick a file, choose its delimiter/comment/decimal/date-time characters while watching a live parse preview, and loads the result straight into a linked `TSciReader`. Documented together with `TSciReader`, since the two are normally used as a pair. See **[TSCIREADER.md](TSCIREADER.md)**. |
 
 ## Installation
 
