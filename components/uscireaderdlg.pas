@@ -29,6 +29,8 @@ type
     function Execute: Boolean; overload;
     function Execute(const AFileName: String = ''): Boolean; overload;
 
+    function LoadDirConfig(const ADirectory: TFileName): Boolean;
+
     property Options: TTXTOptions read GetOptions write SetOptions;
   published
     property Reader: TSciReader read FReader write FReader;
@@ -126,6 +128,26 @@ begin
 
       Result := True;
     end;
+  finally
+    DlgForm.Free;
+  end;
+end;
+
+function TSciReaderDlg.LoadDirConfig(const ADirectory: TFileName): Boolean;
+var
+  DlgForm: TFTXTDialog;
+begin
+  Result := False;
+  if not Assigned(FReader) then
+    raise Exception.Create('Reader property must be assigned before loading configuration.');
+
+  DlgForm := TFTXTDialog.Create(nil);
+  try
+    DlgForm.ConfigFile := FConfigFile;
+    DlgForm.Options := FReader.Options;
+    DlgForm.RestoreDirPreferences(ADirectory);
+    FReader.Options := DlgForm.Options;
+    Result := True;
   finally
     DlgForm.Free;
   end;
