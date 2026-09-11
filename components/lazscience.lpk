@@ -32,6 +32,11 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciReaderDlg"/>
       </Item>
+      <Item>
+        <Filename Value="uscithermocouple.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciThermoCouple"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>

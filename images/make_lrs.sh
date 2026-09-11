@@ -1,1 +1,1 @@
-lazres ../components/LazScience.lrs TSciEdit.png TSciEdit_150.png TSciEdit_200.png TSciPID.png TSciPID_150.png TSciPID_200.png TSciReader.png TSciReader_150.png TSciReader_200.png TSciReaderDlg.png TSciReaderDlg_150.png TSciReaderDlg_200.png
+lazres ../components/LazScience.lrs TSciEdit.png TSciEdit_150.png TSciEdit_200.png TSciPID.png TSciPID_150.png TSciPID_200.png TSciReader.png TSciReader_150.png TSciReader_200.png TSciReaderDlg.png TSciReaderDlg_150.png TSciReaderDlg_200.png TSciThermocouple.png TSciThermocouple_150.png TSciThermocouple_200.png
