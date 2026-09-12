@@ -58,8 +58,10 @@ begin
   // Loop through the rows and populate the series
   for i := 0 to SciReader1.RowCount - 1 do
   begin
-    xVal := SciReader1.Value[SciReader1.Options.XCol, i];
-    yVal := SciReader1.Value[SciReader1.Options.YCol, i];
+    //xVal := SciReader1.Value[SciReader1.Options.XCol, i];
+    //yVal := SciReader1.Value[SciReader1.Options.YCol, i];
+    xVal := SciReader1.X[i];
+    yVal := SciReader1.Y[i];
 
     LineSeries.AddXY(xVal, yVal);
   end;

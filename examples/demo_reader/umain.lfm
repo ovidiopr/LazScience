@@ -52,6 +52,7 @@ object MainForm: TMainForm
   object SciReaderDlg1: TSciReaderDlg
     Reader = SciReader1
     ConfigFile = '.demo_reader.cfg'
+    DialogOptions = [srdAutoSaveConfig, srdShowFormulas]
     OpenDialog = OpenDialog1
     CharOptions.DelimiterChars.Strings = (
       'SPACE'
