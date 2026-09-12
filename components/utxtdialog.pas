@@ -989,9 +989,7 @@ begin
   FPreviewReader := TSciReader.Create(Self);
   FOptionsView := TTXTOptions.Create;
 
-  // Fixed header row showing each column's formula-usable letter (A, B,
-  // C, ...) - set here as well as in the .lfm so it stays correct even if
-  // the designer ever touches this property.
+  // Just in case, ensure that we have a header
   sgView.FixedRows := 1;
 
   FConfigFile := '';
@@ -1247,8 +1245,6 @@ begin
       Ini.WriteString('TXTOptions', 'YFormula', Options.YFormula);
       Ini.WriteInteger('TXTOptions', 'DateSeparator', Ord(Options.DateSeparator));
       Ini.WriteInteger('TXTOptions', 'TimeSeparator', Ord(Options.TimeSeparator));
-      // Line/Col rather than an absolute offset: portable across OSes and
-      // across files with different line-ending conventions.
       Ini.WriteInteger('TXTOptions', 'DateTimeLine', Options.DateTimeLine);
       Ini.WriteInteger('TXTOptions', 'DateTimeCol', Options.DateTimeCol);
       Ini.WriteInteger('TXTOptions', 'DateTimeLength', Options.DateTimeLength);

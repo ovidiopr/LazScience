@@ -321,18 +321,18 @@ object FTXTDialog: TFTXTDialog
   end
   object Splitter: TSplitter
     Left = 425
-    Height = 381
-    Top = 126
+    Height = 371
+    Top = 136
     Width = 5
   end
   object LeftPanel: TPanel
     Left = 0
-    Height = 381
-    Top = 126
+    Height = 371
+    Top = 136
     Width = 425
     Align = alLeft
     BevelOuter = bvNone
-    ClientHeight = 381
+    ClientHeight = 371
     ClientWidth = 425
     ParentFont = False
     TabOrder = 7
@@ -351,7 +351,7 @@ object FTXTDialog: TFTXTDialog
     end
     object mmSource: TMemo
       Left = 0
-      Height = 360
+      Height = 350
       Top = 21
       Width = 425
       Align = alClient
@@ -366,12 +366,12 @@ object FTXTDialog: TFTXTDialog
   end
   object RightPanel: TPanel
     Left = 430
-    Height = 381
-    Top = 126
+    Height = 371
+    Top = 136
     Width = 540
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 381
+    ClientHeight = 371
     ClientWidth = 540
     ParentFont = False
     TabOrder = 3
@@ -390,7 +390,7 @@ object FTXTDialog: TFTXTDialog
     end
     object sgView: TStringGrid
       Left = 0
-      Height = 360
+      Height = 350
       Top = 21
       Width = 540
       Align = alClient
@@ -704,26 +704,25 @@ object FTXTDialog: TFTXTDialog
   end
   object pnFormulaOptions: TPanel
     Left = 0
-    Height = 24
+    Height = 34
     Top = 70
     Width = 970
     Align = alTop
     AutoSize = True
-    ClientHeight = 24
+    ClientHeight = 34
     ClientWidth = 970
     ParentFont = False
     TabOrder = 2
     object XFormulaLbl: TLabel
       AnchorSideLeft.Control = pnFormulaOptions
-      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Control = txtYFormula
       AnchorSideTop.Side = asrCenter
       AnchorSideBottom.Side = asrBottom
       Left = 6
       Height = 16
-      Top = 4
+      Top = 8
       Width = 58
       BorderSpacing.Left = 5
-      BorderSpacing.Top = 5
       Caption = 'X formula'
       Layout = tlCenter
       ParentColor = False
@@ -732,17 +731,16 @@ object FTXTDialog: TFTXTDialog
     object txtXFormula: TEdit
       AnchorSideLeft.Control = XFormulaLbl
       AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Control = txtYFormula
       AnchorSideTop.Side = asrCenter
       AnchorSideRight.Control = dvFormula
       Left = 69
       Height = 21
       Hint = 'Overrides "X column" when non-blank, e.g. 1239.8424121/A. Columns are named A, B, C... (skipping the letters X and Y).'
-      Top = 2
+      Top = 6
       Width = 404
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 5
-      BorderSpacing.Top = 5
       BorderSpacing.Right = 5
       ParentFont = False
       ParentShowHint = False
@@ -753,15 +751,14 @@ object FTXTDialog: TFTXTDialog
     object YFormulaLbl: TLabel
       AnchorSideLeft.Control = dvFormula
       AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Control = txtYFormula
       AnchorSideTop.Side = asrCenter
       AnchorSideBottom.Side = asrBottom
       Left = 498
       Height = 16
-      Top = 4
+      Top = 8
       Width = 58
       BorderSpacing.Left = 5
-      BorderSpacing.Top = 5
       Caption = 'Y formula'
       Layout = tlCenter
       ParentColor = False
@@ -771,13 +768,12 @@ object FTXTDialog: TFTXTDialog
       AnchorSideLeft.Control = YFormulaLbl
       AnchorSideLeft.Side = asrBottom
       AnchorSideTop.Control = pnFormulaOptions
-      AnchorSideTop.Side = asrCenter
       AnchorSideRight.Control = pnFormulaOptions
       AnchorSideRight.Side = asrBottom
       Left = 561
       Height = 21
       Hint = 'Overrides "Y column" when non-blank, e.g. B*X^2/2e5. May reference X, the value computed above.'
-      Top = 2
+      Top = 6
       Width = 403
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 5
@@ -790,16 +786,19 @@ object FTXTDialog: TFTXTDialog
       OnEditingDone = txtYFormulaEditingDone
     end
     object lblFormulaError: TLabel
-      AnchorSideLeft.Control = txtYFormula
-      AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = pnFormulaOptions
-      AnchorSideTop.Side = asrCenter
-      Left = 974
+      AnchorSideLeft.Control = pnFormulaOptions
+      AnchorSideTop.Control = txtYFormula
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = pnFormulaOptions
+      AnchorSideRight.Side = asrBottom
+      Left = 6
       Height = 1
-      Top = 12
-      Width = 1
-      BorderSpacing.Left = 10
+      Top = 32
+      Width = 958
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 5
       BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
       Font.Color = clRed
       ParentColor = False
       ParentFont = False
@@ -807,12 +806,12 @@ object FTXTDialog: TFTXTDialog
     object dvFormula: TDividerBevel
       AnchorSideLeft.Control = pnFormulaOptions
       AnchorSideLeft.Side = asrCenter
-      AnchorSideTop.Control = pnFormulaOptions
-      AnchorSideBottom.Control = pnFormulaOptions
+      AnchorSideTop.Control = txtXFormula
+      AnchorSideBottom.Control = XFormulaLbl
       AnchorSideBottom.Side = asrBottom
       Left = 478
-      Height = 22
-      Top = 1
+      Height = 18
+      Top = 6
       Width = 15
       Anchors = [akTop, akLeft, akBottom]
       Font.Style = [fsBold]
@@ -823,7 +822,7 @@ object FTXTDialog: TFTXTDialog
   object pnDatTimOptions: TPanel
     Left = 0
     Height = 32
-    Top = 94
+    Top = 104
     Width = 970
     Align = alTop
     AutoSize = True
