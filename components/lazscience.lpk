@@ -20,7 +20,7 @@
       <Item>
         <Filename Value="uscipid.pas"/>
         <HasRegisterProc Value="True"/>
-        <UnitName Value="uscipid"/>
+        <UnitName Value="uSciPID"/>
       </Item>
       <Item>
         <Filename Value="uscireader.pas"/>
@@ -39,6 +39,9 @@
       </Item>
     </Files>
     <RequiredPkgs>
+      <Item>
+        <PackageName Value="LazControls"/>
+      </Item>
       <Item>
         <PackageName Value="LCLBase"/>
       </Item>

@@ -7,9 +7,13 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, Grids, Buttons, Spin, IniFiles, Menus, uSciReader, Math;
+  ExtCtrls, Grids, Buttons, Spin, IniFiles, Menus, uSciReader, Math,
+  DividerBevel;
 
 type
+  TSciReaderDlgOption = (srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas);
+  TSciReaderDlgOptions = set of TSciReaderDlgOption;
+
   { TCharListOptions }
   TCharListOptions = class(TPersistent)
   private
@@ -74,10 +78,15 @@ type
     DateLbl: TLabel;
     DateTimeFmtLbl: TLabel;
     lblError: TLabel;
+    lblFormulaError: TLabel;
     miSetAsDateTime: TMenuItem;
     pnDatTimOptions: TPanel;
+    pnFormulaOptions: TPanel;
+    dvFormula: TDividerBevel;
     TimeLbl: TLabel;
     txtDateTimeFmt: TEdit;
+    txtXFormula: TEdit;
+    txtYFormula: TEdit;
     txtXLbl: TEdit;
     ThousandLbl: TLabel;
     DelimiterLbl: TLabel;
@@ -88,6 +97,8 @@ type
     XLblLbl: TLabel;
     YLblLbl: TLabel;
     YColLbl: TLabel;
+    XFormulaLbl: TLabel;
+    YFormulaLbl: TLabel;
     pnFmtOptions: TPanel;
     txtHeader: TSpinEdit;
     lblData: TLabel;
@@ -124,6 +135,8 @@ type
     procedure mmSourceKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mmSourceMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure txtHeaderChange(Sender: TObject);
+    procedure txtXFormulaEditingDone(Sender: TObject);
+    procedure txtYFormulaEditingDone(Sender: TObject);
     procedure miSetAsDelimiterClick(Sender: TObject);
     procedure miSetAsCommentClick(Sender: TObject);
     procedure miSetAsQuotationClick(Sender: TObject);
@@ -138,8 +151,7 @@ type
     FOptionsView: TTXTOptions;
     FFileName: TFileName;
     FConfigFile: TFileName;
-    FDateTimeReading: Boolean;
-    FAutoSaveConfig: Boolean;
+    FDialogOptions: TSciReaderDlgOptions;
     FUpdating: Boolean;
 
     FDateTimeLine: Integer;
@@ -161,6 +173,8 @@ type
     function GetXLbl: String;
     function GetYCol: Integer;
     function GetYLbl: String;
+    function GetXFormula: String;
+    function GetYFormula: String;
     function GetDateSeparator: Char;
     function GetTimeSeparator: Char;
     function GetDateTimeFormat: String;
@@ -171,7 +185,7 @@ type
     procedure SetOpenDialog(Value: TOpenDialog);
 
     procedure SetFileName(Value: TFileName);
-    procedure SetDateTimeReading(Value: Boolean);
+    procedure SetDialogOptions(Value: TSciReaderDlgOptions);
     procedure SetOptions(Value: TTXTOptions);
     procedure SetDelimiter(Value: Char);
     procedure SetComment(Value: Char);
@@ -183,6 +197,8 @@ type
     procedure SetXLbl(Value: String);
     procedure SetYCol(Value: Integer);
     procedure SetYLbl(Value: String);
+    procedure SetXFormula(Value: String);
+    procedure SetYFormula(Value: String);
     procedure SetDateSeparator(Value: Char);
     procedure SetTimeSeparator(Value: Char);
     procedure SetDateTimeFormat(Value: String);
@@ -197,6 +213,7 @@ type
     procedure SetComboChar(ACombo: TComboBox; Value: Char);
 
     procedure PosToLineCol(APos: Integer; out ALine, ACol: Integer);
+    procedure UpdateFormulaError;
   public
     { public declarations }
 
@@ -209,8 +226,8 @@ type
 
     property FileName: TFileName read GetFileName write SetFileName;
     property ConfigFile: TFileName read FConfigFile write FConfigFile;
-    property DateTimeReading: Boolean read FDateTimeReading write SetDateTimeReading;
-    property AutoSaveConfig: Boolean read FAutoSaveConfig write FAutoSaveConfig;
+    property DialogOptions: TSciReaderDlgOptions read FDialogOptions write SetDialogOptions
+                              default [srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas];
 
     property OpenDialog: TOpenDialog read FOpenDialog write SetOpenDialog;
 
@@ -225,6 +242,8 @@ type
     property XLbl: String read GetXLbl write SetXLbl;
     property YCol: Integer read GetYCol write SetYCol;
     property YLbl: String read GetYLbl write SetYLbl;
+    property XFormula: String read GetXFormula write SetXFormula;
+    property YFormula: String read GetYFormula write SetYFormula;
     property DateSeparator: Char read GetDateSeparator write SetDateSeparator;
     property TimeSeparator: Char read GetTimeSeparator write SetTimeSeparator;
 
@@ -438,11 +457,12 @@ begin
     Result := DirectoryName + DirectorySeparator + ChangeFileExt(ExtractFileName(Application.ExeName), '.cfg');
 end;
 
-procedure TFTXTDialog.SetDateTimeReading(Value: Boolean);
+procedure TFTXTDialog.SetDialogOptions(Value: TSciReaderDlgOptions);
 begin
-  FDateTimeReading := Value;
-  pnDatTimOptions.Enabled := Value;
-  miSetAsDateTime.Enabled := Value;
+  FDialogOptions := Value;
+  pnDatTimOptions.Visible := (srdDateTimeReading in Value);
+  miSetAsDateTime.Visible := (srdDateTimeReading in Value);
+  pnFormulaOptions.Visible := (srdShowFormulas in Value);
 end;
 
 function TFTXTDialog.GetOptions: TTXTOptions;
@@ -457,6 +477,8 @@ begin
   FOptionsView.XLbl := XLbl;
   FOptionsView.YCol := YCol;
   FOptionsView.YLbl := YLbl;
+  FOptionsView.XFormula := XFormula;
+  FOptionsView.YFormula := YFormula;
   FOptionsView.DateSeparator := DateSeparator;
   FOptionsView.TimeSeparator := TimeSeparator;
   FOptionsView.DateTimeLine := DateTimeLine;
@@ -549,6 +571,16 @@ end;
 function TFTXTDialog.GetYLbl: String;
 begin
   Result := txtYLbl.Text;
+end;
+
+function TFTXTDialog.GetXFormula: String;
+begin
+  Result := Trim(txtXFormula.Text);
+end;
+
+function TFTXTDialog.GetYFormula: String;
+begin
+  Result := Trim(txtYFormula.Text);
 end;
 
 function TFTXTDialog.GetDateSeparator: Char;
@@ -737,6 +769,8 @@ begin
     XLbl := Value.XLbl;
     YCol := Value.YCol;
     YLbl := Value.YLbl;
+    XFormula := Value.XFormula;
+    YFormula := Value.YFormula;
     DateSeparator := Value.DateSeparator;
     TimeSeparator := Value.TimeSeparator;
     DateTimeLine := Value.DateTimeLine;
@@ -857,6 +891,18 @@ begin
     txtYLbl.Text := Value;
 end;
 
+procedure TFTXTDialog.SetXFormula(Value: String);
+begin
+  if (Value <> txtXFormula.Text) then
+    txtXFormula.Text := Value;
+end;
+
+procedure TFTXTDialog.SetYFormula(Value: String);
+begin
+  if (Value <> txtYFormula.Text) then
+    txtYFormula.Text := Value;
+end;
+
 procedure TFTXTDialog.btnLoadClick(Sender: TObject);
 begin
   if not Assigned(FOpenDialog) then
@@ -943,9 +989,13 @@ begin
   FPreviewReader := TSciReader.Create(Self);
   FOptionsView := TTXTOptions.Create;
 
+  // Fixed header row showing each column's formula-usable letter (A, B,
+  // C, ...) - set here as well as in the .lfm so it stays correct even if
+  // the designer ever touches this property.
+  sgView.FixedRows := 1;
+
   FConfigFile := '';
-  DateTimeReading := True;
-  FAutoSaveConfig := True;
+  DialogOptions := [srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas];
 
   btnLoad.Enabled := Assigned(FOpenDialog);
 
@@ -969,6 +1019,8 @@ begin
   XLbl := 'X';
   YCol := 1;
   YLbl := 'Y';
+  XFormula := '';
+  YFormula := '';
   DateSeparator := '/';
   TimeSeparator := ':';
   DateTimeLine := 0;
@@ -1015,18 +1067,33 @@ begin
   RefreshView;
 end;
 
+procedure TFTXTDialog.txtXFormulaEditingDone(Sender: TObject);
+begin
+  RefreshView;
+end;
+
+procedure TFTXTDialog.txtYFormulaEditingDone(Sender: TObject);
+begin
+  RefreshView;
+end;
+
 procedure TFTXTDialog.UpdateView;
 var
   i, j: Integer;
 begin
   sgView.BeginUpdate;
   try
-    sgView.RowCount := Max(1, FPreviewReader.RowCount);
+    sgView.RowCount := FPreviewReader.RowCount + 1; // +1 for the fixed header row
     sgView.ColCount := Max(1, FPreviewReader.MaxColCount);
+
+    // Fixed header row: the column letter each formula can reference (see
+    // TTXTOptions.XFormula for the A, B, C... naming convention)
+    for j := 0 to sgView.ColCount - 1 do
+      sgView.Cells[j, 0] := ColumnLetter(j);
 
     for i := 0 to FPreviewReader.RowCount - 1 do
       for j := 0 to sgView.ColCount - 1 do
-        sgView.Cells[j, i] := FPreviewReader.Cells[j, i];
+        sgView.Cells[j, i + 1] := FPreviewReader.Cells[j, i];
   finally
     sgView.EndUpdate;
   end;
@@ -1053,6 +1120,8 @@ begin
     FPreviewReader.Options.XLbl := XLbl;
     FPreviewReader.Options.YCol := YCol;
     FPreviewReader.Options.YLbl := YLbl;
+    FPreviewReader.Options.XFormula := XFormula;
+    FPreviewReader.Options.YFormula := YFormula;
 
     FPreviewReader.Options.DateSeparator := DateSeparator;
     FPreviewReader.Options.TimeSeparator := TimeSeparator;
@@ -1076,7 +1145,7 @@ begin
     cbbXCol.ItemIndex := xi;
     cbbYCol.ItemIndex := yi;
 
-    if FDateTimeReading then
+    if (srdDateTimeReading in FDialogOptions) then
     begin
       try
         lblData.Caption:= 'Data - date = ' + DateTimeToStr(FPreviewReader.FileDate);
@@ -1092,7 +1161,41 @@ begin
     else
       lblError.Caption := '';
 
+    UpdateFormulaError;
+
     UpdateView;
+  end;
+end;
+
+// Evaluates the formulas against the first preview row
+procedure TFTXTDialog.UpdateFormulaError;
+var
+  XVal, YVal: Double;
+begin
+  if (XFormula = '') and (YFormula = '') then
+  begin
+    lblFormulaError.Caption := '';
+    Exit;
+  end;
+
+  if FPreviewReader.RowCount = 0 then
+  begin
+    lblFormulaError.Caption := '';
+    Exit;
+  end;
+
+  XVal := FPreviewReader.X[0];
+  YVal := FPreviewReader.Y[0];
+
+  if FPreviewReader.HasErrors then
+  begin
+    lblFormulaError.Font.Color := clRed;
+    lblFormulaError.Caption := FPreviewReader.Errors[FPreviewReader.Errors.Count - 1];
+  end
+  else
+  begin
+    lblFormulaError.Font.Color := clGreen;
+    lblFormulaError.Caption := Format('Row 1: X=%.6g  Y=%.6g', [XVal, YVal]);
   end;
 end;
 
@@ -1113,7 +1216,7 @@ begin
 
   Result := (ShowModal = mrOK);
 
-  if Result and FAutoSaveConfig then
+  if Result and (srdAutoSaveConfig in FDialogOptions) then
     SaveDirPreferences(ConfigDir);
 end;
 
@@ -1140,6 +1243,8 @@ begin
       Ini.WriteString('TXTOptions', 'XLbl', Options.XLbl);
       Ini.WriteInteger('TXTOptions', 'YCol', Options.YCol);
       Ini.WriteString('TXTOptions', 'YLbl', Options.YLbl);
+      Ini.WriteString('TXTOptions', 'XFormula', Options.XFormula);
+      Ini.WriteString('TXTOptions', 'YFormula', Options.YFormula);
       Ini.WriteInteger('TXTOptions', 'DateSeparator', Ord(Options.DateSeparator));
       Ini.WriteInteger('TXTOptions', 'TimeSeparator', Ord(Options.TimeSeparator));
       // Line/Col rather than an absolute offset: portable across OSes and
@@ -1182,6 +1287,8 @@ begin
         XLbl := Ini.ReadString('TXTOptions', 'XLbl', 'X');
         YCol := Ini.ReadInteger('TXTOptions', 'YCol', 1);
         YLbl := Ini.ReadString('TXTOptions', 'YLbl', 'Y');
+        XFormula := Ini.ReadString('TXTOptions', 'XFormula', '');
+        YFormula := Ini.ReadString('TXTOptions', 'YFormula', '');
         DateSeparator := Chr(Ini.ReadInteger('TXTOptions', 'DateSeparator', Ord('/')));
         TimeSeparator := Chr(Ini.ReadInteger('TXTOptions', 'TimeSeparator', Ord(':')));
         DateTimeLine := Ini.ReadInteger('TXTOptions', 'DateTimeLine', 0);

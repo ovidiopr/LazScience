@@ -321,21 +321,21 @@ object FTXTDialog: TFTXTDialog
   end
   object Splitter: TSplitter
     Left = 425
-    Height = 405
-    Top = 102
+    Height = 381
+    Top = 126
     Width = 5
   end
   object LeftPanel: TPanel
     Left = 0
-    Height = 405
-    Top = 102
+    Height = 381
+    Top = 126
     Width = 425
     Align = alLeft
     BevelOuter = bvNone
-    ClientHeight = 405
+    ClientHeight = 381
     ClientWidth = 425
     ParentFont = False
-    TabOrder = 2
+    TabOrder = 7
     object lblSource: TLabel
       Left = 5
       Height = 16
@@ -351,7 +351,7 @@ object FTXTDialog: TFTXTDialog
     end
     object mmSource: TMemo
       Left = 0
-      Height = 384
+      Height = 360
       Top = 21
       Width = 425
       Align = alClient
@@ -366,12 +366,12 @@ object FTXTDialog: TFTXTDialog
   end
   object RightPanel: TPanel
     Left = 430
-    Height = 405
-    Top = 102
+    Height = 381
+    Top = 126
     Width = 540
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 405
+    ClientHeight = 381
     ClientWidth = 540
     ParentFont = False
     TabOrder = 3
@@ -390,7 +390,7 @@ object FTXTDialog: TFTXTDialog
     end
     object sgView: TStringGrid
       Left = 0
-      Height = 384
+      Height = 360
       Top = 21
       Width = 540
       Align = alClient
@@ -399,10 +399,9 @@ object FTXTDialog: TFTXTDialog
       Constraints.MinHeight = 10
       DefaultColWidth = 100
       FixedCols = 0
-      FixedRows = 0
       Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goDrawFocusSelected, goRowSizing, goColSizing, goThumbTracking, goSmoothScroll]
       ParentFont = False
-      RowCount = 1
+      RowCount = 2
       TabOrder = 0
     end
   end
@@ -703,10 +702,128 @@ object FTXTDialog: TFTXTDialog
       Text = 'Y'
     end
   end
+  object pnFormulaOptions: TPanel
+    Left = 0
+    Height = 24
+    Top = 70
+    Width = 970
+    Align = alTop
+    AutoSize = True
+    ClientHeight = 24
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 2
+    object XFormulaLbl: TLabel
+      AnchorSideLeft.Control = pnFormulaOptions
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 6
+      Height = 16
+      Top = 4
+      Width = 58
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'X formula'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object txtXFormula: TEdit
+      AnchorSideLeft.Control = XFormulaLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = dvFormula
+      Left = 69
+      Height = 21
+      Hint = 'Overrides "X column" when non-blank, e.g. 1239.8424121/A. Columns are named A, B, C... (skipping the letters X and Y).'
+      Top = 2
+      Width = 404
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 0
+      OnEditingDone = txtXFormulaEditingDone
+    end
+    object YFormulaLbl: TLabel
+      AnchorSideLeft.Control = dvFormula
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 498
+      Height = 16
+      Top = 4
+      Width = 58
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Y formula'
+      Layout = tlCenter
+      ParentColor = False
+      ParentFont = False
+    end
+    object txtYFormula: TEdit
+      AnchorSideLeft.Control = YFormulaLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnFormulaOptions
+      AnchorSideRight.Side = asrBottom
+      Left = 561
+      Height = 21
+      Hint = 'Overrides "Y column" when non-blank, e.g. B*X^2/2e5. May reference X, the value computed above.'
+      Top = 2
+      Width = 403
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 1
+      OnEditingDone = txtYFormulaEditingDone
+    end
+    object lblFormulaError: TLabel
+      AnchorSideLeft.Control = txtYFormula
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 974
+      Height = 1
+      Top = 12
+      Width = 1
+      BorderSpacing.Left = 10
+      BorderSpacing.Top = 5
+      Font.Color = clRed
+      ParentColor = False
+      ParentFont = False
+    end
+    object dvFormula: TDividerBevel
+      AnchorSideLeft.Control = pnFormulaOptions
+      AnchorSideLeft.Side = asrCenter
+      AnchorSideTop.Control = pnFormulaOptions
+      AnchorSideBottom.Control = pnFormulaOptions
+      AnchorSideBottom.Side = asrBottom
+      Left = 478
+      Height = 22
+      Top = 1
+      Width = 15
+      Anchors = [akTop, akLeft, akBottom]
+      Font.Style = [fsBold]
+      Orientation = trVertical
+      ParentFont = False
+    end
+  end
   object pnDatTimOptions: TPanel
     Left = 0
     Height = 32
-    Top = 70
+    Top = 94
     Width = 970
     Align = alTop
     AutoSize = True

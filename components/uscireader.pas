@@ -5,7 +5,7 @@ unit uSciReader;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, LResources;
+  Classes, SysUtils, DateUtils, LResources, uFormula;
 
 type
   TTXTOptions = class(TPersistent)
@@ -21,6 +21,8 @@ type
     FXLbl: String;
     FYCol: Integer;
     FYLbl: String;
+    FXFormula: String;
+    FYFormula: String;
 
     FDateSeparator: Char;
     FTimeSeparator: Char;
@@ -38,6 +40,8 @@ type
     property XLbl: String read FXLbl write FXLbl;
     property YCol: Integer read FYCol write FYCol;
     property YLbl: String read FYLbl write FYLbl;
+    property XFormula: String read FXFormula write FXFormula;
+    property YFormula: String read FYFormula write FYFormula;
     property DateSeparator: Char read FDateSeparator write FDateSeparator;
     property TimeSeparator: Char read FTimeSeparator write FTimeSeparator;
     property DateTimeLine: Integer read FDateTimeLine write FDateTimeLine;
@@ -62,10 +66,19 @@ type
     FLines: TStringList;
     FErrors: TStringList;
 
+    FXFormulaObj: TFormula;
+    FYFormulaObj: TFormula;
+
     function GetCell(ACol, ARow: Integer): String;
     function GetValue(ACol, ARow: Integer): Double;
     function GetColCount(ARow: Integer): Integer;
     function GetHasErrors: Boolean;
+    function GetX(ARow: Integer): Double;
+    function GetY(ARow: Integer): Double;
+
+    function BuildColumnNames(ColCount: Integer; const ExtraNames: array of String): TStringArray;
+    function EnsureXFormula: TFormula;
+    function EnsureYFormula: TFormula;
 
     procedure SetOptions(Value: TTXTOptions);
   public
@@ -83,11 +96,16 @@ type
     property RowCount: Integer read FRowCount;
     property MaxColCount: Integer read FMaxColCount;
 
+    property X[ARow: Integer]: Double read GetX;
+    property Y[ARow: Integer]: Double read GetY;
+
     property Errors: TStringList read FErrors;
     property HasErrors: Boolean read GetHasErrors;
   published
     property Options: TTXTOptions read FOptions write SetOptions;
   end;
+
+function ColumnLetter(ColIndex: Integer): String;
 
 procedure Register;
 
@@ -96,6 +114,23 @@ implementation
 procedure Register;
 begin
   RegisterComponents('Science', [TSciReader]);
+end;
+
+function ColumnLetter(ColIndex: Integer): String;
+const
+  Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWZ'; // 24 letters - X and Y are skipped
+var
+  N: Integer;
+begin
+  if (ColIndex >= 0) and (ColIndex < Length(Alphabet)) then
+    Result := Alphabet[ColIndex + 1]
+  else if ColIndex >= 0 then
+  begin
+    N := ColIndex - Length(Alphabet);
+    Result := Alphabet[(N div Length(Alphabet)) + 1] + Alphabet[(N mod Length(Alphabet)) + 1];
+  end
+  else
+    Result := '';
 end;
 
 { TTXTOptions }
@@ -113,6 +148,8 @@ begin
   FXLbl := 'X';
   FYCol := 1;
   FYLbl := 'Y';
+  FXFormula := '';
+  FYFormula := '';
   FDateSeparator := '/';
   FTimeSeparator := ':';
   FDateTimeLine := 0;
@@ -138,6 +175,8 @@ begin
     FXLbl := Src.FXLbl;
     FYCol := Src.FYCol;
     FYLbl := Src.FYLbl;
+    FXFormula := Src.FXFormula;
+    FYFormula := Src.FYFormula;
     FDateSeparator := Src.FDateSeparator;
     FTimeSeparator := Src.FTimeSeparator;
     FDateTimeLine := Src.FDateTimeLine;
@@ -162,6 +201,8 @@ begin
             (FXLbl = Other.FXLbl) and
             (FYCol = Other.FYCol) and
             (FYLbl = Other.FYLbl) and
+            (FXFormula = Other.FXFormula) and
+            (FYFormula = Other.FYFormula) and
             (FDateSeparator = Other.FDateSeparator) and
             (FTimeSeparator = Other.FTimeSeparator) and
             (FDateTimeLine = Other.FDateTimeLine) and
@@ -183,6 +224,8 @@ end;
 
 destructor TSciReader.Destroy;
 begin
+  FreeAndNil(FXFormulaObj);
+  FreeAndNil(FYFormulaObj);
   FreeAndNil(FErrors);
   FreeAndNil(FLines);
   FreeAndNil(FOptions);
@@ -202,6 +245,9 @@ begin
   FMaxColCount := 0;
   FLines.Clear;
   FErrors.Clear;
+  // Recompile formulas on every load
+  FreeAndNil(FXFormulaObj);
+  FreeAndNil(FYFormulaObj);
 end;
 
 function TSciReader.GetHasErrors: Boolean;
@@ -241,6 +287,101 @@ begin
     Result := Length(FData[ARow])
   else
     Result := 0;
+end;
+
+function TSciReader.BuildColumnNames(ColCount: Integer; const ExtraNames: array of String): TStringArray;
+var
+  i: Integer;
+begin
+  SetLength(Result, ColCount + Length(ExtraNames));
+  for i := 0 to ColCount - 1 do
+    Result[i] := ColumnLetter(i);
+  for i := 0 to High(ExtraNames) do
+    Result[ColCount + i] := ExtraNames[i];
+end;
+
+function TSciReader.EnsureXFormula: TFormula;
+begin
+  if not Assigned(FXFormulaObj) then
+    FXFormulaObj := TFormula.Create(FOptions.XFormula, BuildColumnNames(FMaxColCount, []));
+  Result := FXFormulaObj;
+end;
+
+function TSciReader.EnsureYFormula: TFormula;
+begin
+  if not Assigned(FYFormulaObj) then
+    FYFormulaObj := TFormula.Create(FOptions.YFormula, BuildColumnNames(FMaxColCount, ['X']));
+  Result := FYFormulaObj;
+end;
+
+function TSciReader.GetX(ARow: Integer): Double;
+var
+  F: TFormula;
+  Names: TStringArray;
+  Values: TDoubleArray;
+  i, ColN: Integer;
+begin
+  if Trim(FOptions.XFormula) = '' then
+  begin
+    Result := GetValue(FOptions.XCol, ARow); // legacy column-index behavior
+    Exit;
+  end;
+
+  F := EnsureXFormula;
+  if not F.Valid then
+  begin
+    FErrors.Add('X Formula error: ' + F.ErrorMessage);
+    Result := 0.0;
+    Exit;
+  end;
+
+  ColN := GetColCount(ARow);
+  SetLength(Names, ColN);
+  SetLength(Values, ColN);
+  for i := 0 to ColN - 1 do
+  begin
+    Names[i] := ColumnLetter(i);
+    Values[i] := GetValue(i, ARow);
+  end;
+
+  Result := F.Evaluate(Names, Values);
+end;
+
+function TSciReader.GetY(ARow: Integer): Double;
+var
+  F: TFormula;
+  Names: TStringArray;
+  Values: TDoubleArray;
+  i, ColN: Integer;
+begin
+  if Trim(FOptions.YFormula) = '' then
+  begin
+    Result := GetValue(FOptions.YCol, ARow); // legacy column-index behavior
+    Exit;
+  end;
+
+  F := EnsureYFormula;
+  if not F.Valid then
+  begin
+    FErrors.Add('Y Formula error: ' + F.ErrorMessage);
+    Result := 0.0;
+    Exit;
+  end;
+
+  // X is always available to the Y formula, whether X itself came from a
+  // formula or from the legacy XCol
+  ColN := GetColCount(ARow);
+  SetLength(Names, ColN + 1);
+  SetLength(Values, ColN + 1);
+  for i := 0 to ColN - 1 do
+  begin
+    Names[i] := ColumnLetter(i);
+    Values[i] := GetValue(i, ARow);
+  end;
+  Names[ColN] := 'X';
+  Values[ColN] := GetX(ARow);
+
+  Result := F.Evaluate(Names, Values);
 end;
 
 procedure TSciReader.LoadFromFile(const AFileName: String);

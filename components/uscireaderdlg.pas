@@ -13,8 +13,7 @@ type
     FReader: TSciReader;
     FFileName: String;
     FConfigFile: TFileName;
-    FDateTimeReading: Boolean;
-    FAutoSaveConfig: Boolean;
+    FDialogOptions: TSciReaderDlgOptions;
     FOpenDialog: TOpenDialog;
 
     FCharOptions: TCharListOptions;
@@ -22,6 +21,7 @@ type
     function GetOptions: TTXTOptions;
     procedure SetOptions(const Value: TTXTOptions);
     procedure SetCharOptions(const Value: TCharListOptions);
+    procedure SetDialogOptions(AValue: TSciReaderDlgOptions);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -38,8 +38,8 @@ type
 
     property ConfigFile: TFileName read FConfigFile write FConfigFile;
 
-    property DateTimeReading: Boolean read FDateTimeReading write FDateTimeReading default True;
-    property AutoSaveConfig: Boolean read FAutoSaveConfig write FAutoSaveConfig default True;
+    property DialogOptions: TSciReaderDlgOptions read FDialogOptions write SetDialogOptions
+                              default [srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas];
 
     property OpenDialog: TOpenDialog read FOpenDialog write FOpenDialog;
 
@@ -59,8 +59,7 @@ constructor TSciReaderDlg.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  FDateTimeReading := True;
-  FAutoSaveConfig := True;
+  FDialogOptions := [srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas];
 
   FCharOptions := TCharListOptions.Create;
 end;
@@ -90,6 +89,13 @@ begin
   FCharOptions.Assign(Value);
 end;
 
+procedure TSciReaderDlg.SetDialogOptions(AValue: TSciReaderDlgOptions);
+begin
+  if FDialogOptions = AValue then Exit;
+
+  FDialogOptions := AValue;
+end;
+
 function TSciReaderDlg.Execute: Boolean;
 begin
   Result := Execute(FFileName);
@@ -111,8 +117,7 @@ begin
   DlgForm := TFTXTDialog.Create(nil);
   try
     DlgForm.ConfigFile := FConfigFile;
-    DlgForm.DateTimeReading := FDateTimeReading;
-    DlgForm.AutoSaveConfig := FAutoSaveConfig;
+    DlgForm.DialogOptions := FDialogOptions;
     DlgForm.OpenDialog := FOpenDialog;
     DlgForm.CharOptions := FCharOptions;
     DlgForm.Options := FReader.Options;
