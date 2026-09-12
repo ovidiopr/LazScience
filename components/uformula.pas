@@ -59,6 +59,8 @@ type
     FValid: Boolean;
     FErrorMessage: String;
     FValidVars: TStringArray; // allowed variable names for THIS formula
+    FDecimalSep: Char;
+    FThousandSep: Char;
 
     // Tokenizer state
     FSrc: String;
@@ -81,9 +83,9 @@ type
     procedure Compile(const Expression: String);
   public
     // Compiles against the fixed variable set X, Y, I, N
-    constructor Create(const Expression: String); overload;
+    constructor Create(const Expression: String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0); overload;
     // Compiles against an explicit, caller-chosen set of variable names
-    constructor Create(const Expression: String; const ValidVars: array of String); overload;
+    constructor Create(const Expression: String; const ValidVars: array of String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0); overload;
     destructor Destroy; override;
 
     function Evaluate(X, Y: Double; I, N: Integer): Double; overload;
@@ -97,8 +99,7 @@ type
   end;
 
 // Check for UI validation, without keeping the compiled formula around
-// Returns True and clears ErrorMsg if Expr parses cleanly against ValidVars
-function TryCompileFormula(const Expr: String; const ValidVars: array of String; out ErrorMsg: String): Boolean;
+function TryCompileFormula(const Expr: String; const ValidVars: array of String; out ErrorMsg: String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0): Boolean;
 
 implementation
 
@@ -292,6 +293,7 @@ end;
 procedure TFormula.NextToken;
 var
   Start: Integer;
+  NumText: String;
 begin
   while (FPos <= Length(FSrc)) and (FSrc[FPos] in [' ', #9]) do
     Inc(FPos);
@@ -304,10 +306,12 @@ begin
   end;
 
   // Number: digits, optional decimal point, optional exponent
-  if (FSrc[FPos] in ['0'..'9', '.']) then
+  if (FSrc[FPos] in ['0'..'9']) or (FSrc[FPos] = FDecimalSep) then
   begin
     Start := FPos;
-    while (FPos <= Length(FSrc)) and (FSrc[FPos] in ['0'..'9', '.']) do
+    while (FPos <= Length(FSrc)) and
+          ((FSrc[FPos] in ['0'..'9']) or (FSrc[FPos] = FDecimalSep) or
+           ((FThousandSep <> #0) and (FSrc[FPos] = FThousandSep))) do
       Inc(FPos);
     if (FPos <= Length(FSrc)) and (FSrc[FPos] in ['e', 'E']) then
     begin
@@ -318,7 +322,15 @@ begin
         Inc(FPos);
     end;
     FTokText := Copy(FSrc, Start, FPos - Start);
-    if not TryStrToFloat(FTokText, FTokValue, FInvariantFormat) then
+
+    // Normalize to the plain '.'-decimal
+    NumText := FTokText;
+    if (FThousandSep <> #0) then
+      NumText := StringReplace(NumText, FThousandSep, '', [rfReplaceAll]);
+    if (FDecimalSep <> '.') then
+      NumText := StringReplace(NumText, FDecimalSep, '.', [rfReplaceAll]);
+
+    if not TryStrToFloat(NumText, FTokValue, FInvariantFormat) then
       raise EFormulaError.CreateFmt('"%s" is not a valid number', [FTokText]);
     FTokKind := tkNumber;
     Exit;
@@ -520,17 +532,19 @@ begin
   end;
 end;
 
-constructor TFormula.Create(const Expression: String);
+constructor TFormula.Create(const Expression: String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0);
 begin
-  Self.Create(Expression, ['X', 'Y', 'I', 'N']);
+  Self.Create(Expression, ['X', 'Y', 'I', 'N'], ADecimalSeparator, AThousandSeparator);
 end;
 
-constructor TFormula.Create(const Expression: String; const ValidVars: array of String);
+constructor TFormula.Create(const Expression: String; const ValidVars: array of String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0);
 var
   j: Integer;
 begin
   inherited Create;
   FExpression := Expression;
+  FDecimalSep := ADecimalSeparator;
+  FThousandSep := AThousandSeparator;
   SetLength(FValidVars, Length(ValidVars));
   for j := 0 to High(ValidVars) do
     FValidVars[j] := ValidVars[j];
@@ -556,11 +570,11 @@ begin
     Result := 0.0;
 end;
 
-function TryCompileFormula(const Expr: String; const ValidVars: array of String; out ErrorMsg: String): Boolean;
+function TryCompileFormula(const Expr: String; const ValidVars: array of String; out ErrorMsg: String; ADecimalSeparator: Char = '.'; AThousandSeparator: Char = #0): Boolean;
 var
   F: TFormula;
 begin
-  F := TFormula.Create(Expr, ValidVars);
+  F := TFormula.Create(Expr, ValidVars, ADecimalSeparator, AThousandSeparator);
   try
     Result := F.Valid;
     ErrorMsg := F.ErrorMessage;

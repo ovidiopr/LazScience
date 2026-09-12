@@ -303,14 +303,14 @@ end;
 function TSciReader.EnsureXFormula: TFormula;
 begin
   if not Assigned(FXFormulaObj) then
-    FXFormulaObj := TFormula.Create(FOptions.XFormula, BuildColumnNames(FMaxColCount, []));
+    FXFormulaObj := TFormula.Create(FOptions.XFormula, BuildColumnNames(FMaxColCount, []), FOptions.Decimal, FOptions.Thousand);
   Result := FXFormulaObj;
 end;
 
 function TSciReader.EnsureYFormula: TFormula;
 begin
   if not Assigned(FYFormulaObj) then
-    FYFormulaObj := TFormula.Create(FOptions.YFormula, BuildColumnNames(FMaxColCount, ['X']));
+    FYFormulaObj := TFormula.Create(FOptions.YFormula, BuildColumnNames(FMaxColCount, ['X']), FOptions.Decimal, FOptions.Thousand);
   Result := FYFormulaObj;
 end;
 
@@ -368,8 +368,7 @@ begin
     Exit;
   end;
 
-  // X is always available to the Y formula, whether X itself came from a
-  // formula or from the legacy XCol
+  // X is always available to the Y formula
   ColN := GetColCount(ARow);
   SetLength(Names, ColN + 1);
   SetLength(Values, ColN + 1);
