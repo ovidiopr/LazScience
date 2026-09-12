@@ -8,7 +8,7 @@ unit LazScience;
 interface
 
 uses
-  uSciEdit, uSciPID, uSciReader, uSciReaderDlg, uSciThermoCouple, 
+  uSciEdit, uSciPID, uSciReader, uSciReaderDlg, uSciThermoCouple, uSciDM3, 
   LazarusPackageIntf;
 
 implementation
@@ -20,6 +20,7 @@ begin
   RegisterUnit('uSciReader', @uSciReader.Register);
   RegisterUnit('uSciReaderDlg', @uSciReaderDlg.Register);
   RegisterUnit('uSciThermoCouple', @uSciThermoCouple.Register);
+  RegisterUnit('uSciDM3', @uSciDM3.Register);
 end;
 
 initialization

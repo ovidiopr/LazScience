@@ -37,6 +37,11 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciThermoCouple"/>
       </Item>
+      <Item>
+        <Filename Value="uscidm3.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciDM3"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
