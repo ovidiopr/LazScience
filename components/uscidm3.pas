@@ -264,8 +264,8 @@ function ReadBool(F: TFileStream): Boolean;
 function ReadChar(F: TFileStream): AnsiChar;
 // Read Len bytes as a String from file F
 function ReadString(F: TFileStream; Len: Integer = 1): String;
-// Read Len bytes as a String from file F
-function ReadUnicodeString(F: TFileStream; Len: Integer = 1): String;
+// Read Len bytes as a UTF-16LE string from file F, re-encoded into Charset
+function ReadUnicodeString(F: TFileStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
 // Read 2 bytes as *little endian* SmallInt from file F
 function ReadLESmallInt(F: TFileStream): SmallInt;
 // Read 4 bytes as *little endian* LongInt from file F
@@ -339,21 +339,70 @@ begin
   SetString(Result, PAnsiChar(@Buffer[0]), Len);
 end;
 
-// Read Len bytes as a String from file F
-function ReadUnicodeString(F: TFileStream; Len: Integer = 1): String;
-const
-  um: Array [0..3] of Byte = (181, 0, 109, 0);
+// Read Len bytes as a UTF-16LE string from file F, re-encoded into Charset
+function ReadUnicodeString(F: TFileStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
 var
   Buffer: Array of Byte;
+  CodeUnitCount, i: Integer;
+  CodePoint, HighSurrogate: Cardinal;
+
+  // Appends the UTF-8 encoding of a single Unicode code point to Result.
+  procedure AppendUTF8(CP: Cardinal);
+  begin
+    if CP <= $7F then
+      Result := Result + Chr(CP)
+    else if CP <= $7FF then
+      Result := Result + Chr($C0 or (CP shr 6)) +
+                          Chr($80 or (CP and $3F))
+    else if CP <= $FFFF then
+      Result := Result + Chr($E0 or (CP shr 12)) +
+                          Chr($80 or ((CP shr 6) and $3F)) +
+                          Chr($80 or (CP and $3F))
+    else
+      Result := Result + Chr($F0 or (CP shr 18)) +
+                          Chr($80 or ((CP shr 12) and $3F)) +
+                          Chr($80 or ((CP shr 6) and $3F)) +
+                          Chr($80 or (CP and $3F));
+  end;
+
 begin
+  Result := '';
+  if Len <= 0 then
+    Exit;
+
   SetLength(Buffer, Len);
   F.ReadBuffer(Buffer[0], Len);
 
-  if (Buffer[0] = um[0]) and (Buffer[1] = um[1]) and
-     (Buffer[2] = um[2]) and (Buffer[3] = um[3]) then
-    Result := 'µm'
-  else
-    SetString(Result, PUnicodeChar(@Buffer[0]), Len div 2);
+  // Len is a byte count; UTF-16 code units are 2 bytes each
+  // For an odd Len, simply drop the trailing byte
+  CodeUnitCount := Len div 2;
+
+  if not SameText(Charset, 'UTF-8') then
+  begin
+    // Only UTF-8 is fully implemented
+    SetLength(Result, CodeUnitCount);
+    for i := 0 to CodeUnitCount - 1 do
+      Result[i + 1] := Chr(Buffer[2*i]);
+    Exit;
+  end;
+
+  i := 0;
+  while i < CodeUnitCount do
+  begin
+    CodePoint := Buffer[2*i] or (Buffer[2*i + 1] shl 8);
+
+    // Combine a UTF-16 surrogate pair into a single code point.
+    if (CodePoint >= $D800) and (CodePoint <= $DBFF) and (i + 1 < CodeUnitCount) then
+    begin
+      HighSurrogate := CodePoint;
+      Inc(i);
+      CodePoint := Buffer[2*i] or (Buffer[2*i + 1] shl 8);
+      CodePoint := $10000 + ((HighSurrogate - $D800) shl 10) + (CodePoint - $DC00);
+    end;
+
+    AppendUTF8(CodePoint);
+    Inc(i);
+  end;
 end;
 
 // Read 2 bytes as *little endian* SmallInt from file F
@@ -489,6 +538,9 @@ var
 begin
   // Go down a level
   Inc(FCurGroupLevel);
+  if FCurGroupLevel >= MAXDEPTH then
+    raise Exception.CreateFmt('%x: Tag group nesting exceeds MAXDEPTH (%d)',
+                              [FFile.Position, MAXDEPTH]);
   // Increment group counter
   Inc(FCurGroupAtLevelX[FCurGroupLevel]);
   // Set number of current tag to -1
@@ -551,6 +603,9 @@ begin
   else
   begin
     // It is a tag group
+    if FCurGroupLevel + 1 >= MAXDEPTH then
+      raise Exception.CreateFmt('%x: Tag group nesting exceeds MAXDEPTH (%d)',
+                                [FFile.Position, MAXDEPTH]);
     FCurGroupNameAtLevelX[FCurGroupLevel + 1] := TagLabel;
     if assigned(TheTree) and assigned(ParentNode) then
       ChildNode := TheTree.Items.AddChild(ParentNode, TagLabel);
@@ -669,7 +724,7 @@ begin
     if (DebugLevel > 3) and assigned(OnPrintMessage) then
       OnPrintMessage(Self, Format('rSD @ %s/%x:', [IntToStr(FFile.Position), FFile.Position]), mtInformation);
 
-    Result := ReadUnicodeString(FFile, StringSize);
+    Result := ReadUnicodeString(FFile, StringSize, FOutputCharset);
     //Result := ReadString(FFile, StringSize);
 
     if (DebugLevel > 3) and assigned(OnPrintMessage) then
@@ -784,6 +839,16 @@ begin
     NameLength := ReadLongInt(FFile);
     if (DebugLevel > 9) and assigned(OnPrintMessage) then
       OnPrintMessage(Self, Format('%dth NameLength = %d', [i, NameLength]), mtInformation);
+    // Struct fields are normally unnamed (NameLength = 0) in DM3 files, but
+    // skip over any name bytes if present so the stream stays in sync
+    // instead of silently misreading everything that follows.
+    if NameLength > 0 then
+    begin
+      if assigned(OnPrintMessage) then
+        OnPrintMessage(Self, Format('%x: Unexpected named struct field (length %d), skipping name.',
+                                    [FFile.Position, NameLength]), mtWarning);
+      FFile.Seek(NameLength, soFromCurrent);
+    end;
     FieldType := ReadLongInt(FFile);
     Result[i] := FieldType;
   end;
@@ -903,8 +968,12 @@ var
   data, ll, hl: Double;
   TempIntfImage: TLazIntfImage;
 begin
+  Result := Nil;
   if IsOpen and IsParsed then
   begin
+    if (Index < 0) or (Index >= ImageDepth) then
+      raise Exception.CreateFmt('Image index %d out of range (0..%d)', [Index, ImageDepth - 1]);
+
     w := ImageWidth;
     h := ImageHeight;
     ll := LowLimit;
@@ -921,8 +990,9 @@ begin
       for j := 0 to h - 1 do
       begin
         if DataType in [COMPLEX8_DATA, PACKED_DATA, COMPLEX16_DATA] then
+          // The tiny epsilon avoids Ln(0) = -Infinity for an exactly-zero complex value.
           data := Ln(Sqrt(Power(ImageData[i, j, Index], 2) +
-                          Power(FDataImag[i, j, Index], 2)))
+                          Power(FDataImag[i, j, Index], 2)) + 1e-30)
         else
           data := ImageData[i, j, Index];
 
@@ -1334,6 +1404,7 @@ var
   TnSize, TnOffset, TnWidth, TnHeight: Integer;
   RawData: TBytes;
 begin
+  Result := Nil;
   if IsOpen and IsParsed then
   begin
     TagRoot := 'root.ImageList.0.ImageData';
@@ -1375,13 +1446,14 @@ function TSciDM3.GetThumbnailData: TByteDynArray;
 var
   BmpThumbnail: TBitmap;
 begin
+  SetLength(Result, 0);
   if IsOpen and IsParsed then
   begin
     BmpThumbnail := GetThumbnail;
     try
       SetLength(Result, BmpThumbnail.Width*BmpThumbnail.Height*2);
       //Move(BmpThumbnail.ScanLine[0]^, Result[0], Length(Result));
-      Move(BmpThumbnail.RawImage, Result[0], Length(Result));
+      Move(BmpThumbnail.RawImage.Data[0], Result[0], Length(Result));
     finally
       BmpThumbnail.Free;
     end;
@@ -1392,6 +1464,7 @@ function TSciDM3.PNGThumbnail: TPortableNetworkGraphic;
 var
   BmpThumbnail: TBitmap;
 begin
+  Result := Nil;
   if IsOpen and IsParsed then
   begin
     try
@@ -1400,7 +1473,7 @@ begin
         Result := TPortableNetworkGraphic.Create;
         Result.Assign(BmpThumbnail);
       finally
-        Thumbnail.Free;
+        BmpThumbnail.Free;
       end;
     except
       on E: Exception do
@@ -1411,13 +1484,15 @@ begin
 end;
 
 function TSciDM3.GetImageType: Integer;
+var
+  TagName: String;
 begin
+  Result := -1;
   if IsOpen and IsParsed then
   begin
-    if Tags.IndexOfName('root.ImageList.1.ImageData.DataType') > -1 then
-      Result := StrToInt(Tags.Values['root.ImageList.1.ImageData.DataType'])
-    else
-      Result := -1;
+    TagName := Format('root.ImageList.%d.ImageData.DataType', [ChosenImage]);
+    if Tags.IndexOfName(TagName) > -1 then
+      Result := StrToInt(Tags.Values[TagName]);
   end;
 end;
 
@@ -1427,11 +1502,13 @@ const
 var
   i, j, k: Integer;
 begin
+  Result := 0;
   if IsOpen and IsParsed then
   begin
     if Tags.IndexOfName(TagName) > -1 then
       Result := StrToFloat(Tags.Values[TagName])
-    else
+    else if (Length(FDataReal) > 0) and (Length(FDataReal[0]) > 0) and
+            (Length(FDataReal[0, 0]) > 0) then
     begin
       Result := FDataReal[0, 0, 0];
       for i := Low(FDataReal) to High(FDataReal) do
@@ -1449,11 +1526,13 @@ const
 var
   i, j, k: Integer;
 begin
+  Result := 0;
   if IsOpen and IsParsed then
   begin
     if Tags.IndexOfName(TagName) > -1 then
       Result := StrToFloat(Tags.Values[TagName])
-    else
+    else if (Length(FDataReal) > 0) and (Length(FDataReal[0]) > 0) and
+            (Length(FDataReal[0, 0]) > 0) then
     begin
       Result := FDataReal[0, 0, 0];
       for i := Low(FDataReal) to High(FDataReal) do
@@ -1467,6 +1546,7 @@ end;
 
 function TSciDM3.GetCuts: TPoint;
 begin
+  Result := TPoint.Create(0, 0);
   if IsOpen and IsParsed then
     Result := TPoint.Create(Round(LowLimit), Round(HighLimit));
 end;
@@ -1475,9 +1555,13 @@ function TSciDM3.AxisUnits(Index: Integer = 0): TTriple;
 var
   TagRoot: String;
 begin
+  Result.Origin := 0;
+  Result.PixelSize := 0;
+  Result.Units := '';
+
   if IsOpen and IsParsed then
   begin
-    TagRoot := Format('root.ImageList.1.ImageData.Calibrations.Dimension.%d', [Index]);
+    TagRoot := Format('root.ImageList.%d.ImageData.Calibrations.Dimension.%d', [ChosenImage, Index]);
 
     with Result do
     begin
@@ -1496,15 +1580,24 @@ end;
 
 function TSciDM3.GetPxSize: TTriple;
 begin
+  Result.Origin := 0;
+  Result.PixelSize := 0;
+  Result.Units := '';
   if IsOpen and IsParsed then
     Result := AxisUnits(0);
 end;
 
 function TSciDM3.GetSptUnits: String;
+var
+  TagName: String;
 begin
+  Result := '';
   if IsOpen and IsParsed then
-    if Tags.IndexOfName('root.ImageList.1.ImageData.Calibrations.Brightness.Units') > -1 then
-      Result := Tags.Values['root.ImageList.1.ImageData.Calibrations.Brightness.Units'];
+  begin
+    TagName := Format('root.ImageList.%d.ImageData.Calibrations.Brightness.Units', [ChosenImage]);
+    if Tags.IndexOfName(TagName) > -1 then
+      Result := Tags.Values[TagName];
+  end;
 end;
 
 procedure Register;
