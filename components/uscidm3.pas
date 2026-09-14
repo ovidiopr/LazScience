@@ -146,7 +146,7 @@ type
     FCurGroupNameAtLevelX: Array[0..MAXDEPTH - 1] of String;
     FCurTagAtLevelX: Array[0..MAXDEPTH - 1] of Integer;
     FCurTagName: String;
-    FFile: TFileStream;
+    FFile: TStream;
     FStoredTags: TStringList;
     FTagDict: TStringList;
 
@@ -250,33 +250,33 @@ procedure Register;
 
 // Binary data reading functions
 // Read 4 bytes as *big endian* LongInt from file F
-function ReadLongInt(F: TFileStream): LongInt;
+function ReadLongInt(F: TStream): LongInt;
 // Read 2 bytes as *big endian* SmallInt from file F
-function ReadSmallInt(F: TFileStream): SmallInt;
+function ReadSmallInt(F: TStream): SmallInt;
 // Read 1 byte as Byte from file F
-function ReadByte(F: TFileStream): Byte;
+function ReadByte(F: TStream): Byte;
 // Read 1 byte as ShortInt from file F
-function ReadShortInt(F: TFileStream): ShortInt;
+function ReadShortInt(F: TStream): ShortInt;
 // Read 1 byte as Boolean from file F
-function ReadBool(F: TFileStream): Boolean;
+function ReadBool(F: TStream): Boolean;
 // Read 1 byte as Char from file F
-function ReadChar(F: TFileStream): AnsiChar;
+function ReadChar(F: TStream): AnsiChar;
 // Read Len bytes as a String from file F
-function ReadString(F: TFileStream; Len: Integer = 1): String;
+function ReadString(F: TStream; Len: Integer = 1): String;
 // Read Len bytes as a UTF-16LE string from file F, re-encoded into Charset
-function ReadUnicodeString(F: TFileStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
+function ReadUnicodeString(F: TStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
 // Read 2 bytes as *little endian* SmallInt from file F
-function ReadLESmallInt(F: TFileStream): SmallInt;
+function ReadLESmallInt(F: TStream): SmallInt;
 // Read 4 bytes as *little endian* LongInt from file F
-function ReadLELongInt(F: TFileStream): LongInt;
+function ReadLELongInt(F: TStream): LongInt;
 // Read 2 bytes as *little endian* Word from file F
-function ReadLEWord(F: TFileStream): Word;
+function ReadLEWord(F: TStream): Word;
 // Read 4 bytes as *little endian* Cardinal from file F
-function ReadLECardinal(F: TFileStream): LongWord;
+function ReadLECardinal(F: TStream): LongWord;
 // Read 4 bytes as *little endian* Single from file F
-function ReadLEFloat(F: TFileStream): Single;
+function ReadLEFloat(F: TStream): Single;
 // Read 8 bytes as *little endian* Double from file F
-function ReadLEDouble(F: TFileStream): Double;
+function ReadLEDouble(F: TStream): Double;
 
 function NormalizePixelValue(RawValue, LowLimit, HighLimit: Double): Byte;
 
@@ -285,7 +285,7 @@ implementation
 // Binary data reading functions
 
 // Read 4 bytes as *big endian* LongInt from file F
-function ReadLongInt(F: TFileStream): LongInt;
+function ReadLongInt(F: TStream): LongInt;
 var
   Buffer: Array[0..3] of Byte;
 begin
@@ -295,7 +295,7 @@ begin
 end;
 
 // Read 2 bytes as *big endian* SmallInt from file F
-function ReadSmallInt(F: TFileStream): SmallInt;
+function ReadSmallInt(F: TStream): SmallInt;
 var
   Buffer: Array[0..1] of Byte;
 begin
@@ -304,25 +304,25 @@ begin
 end;
 
 // Read 1 byte as Byte from file F
-function ReadByte(F: TFileStream): Byte;
+function ReadByte(F: TStream): Byte;
 begin
   F.ReadBuffer(Result, SizeOf(Result));
 end;
 
 // Read 1 byte as ShortInt from file F
-function ReadShortInt(F: TFileStream): ShortInt;
+function ReadShortInt(F: TStream): ShortInt;
 begin
   F.ReadBuffer(Result, SizeOf(Result));
 end;
 
 // Read 1 byte as Boolean from file F
-function ReadBool(F: TFileStream): Boolean;
+function ReadBool(F: TStream): Boolean;
 begin
   Result := ReadShortInt(F) <> 0;
 end;
 
 // Read 1 byte as Char from file F
-function ReadChar(F: TFileStream): AnsiChar;
+function ReadChar(F: TStream): AnsiChar;
 var
   Buffer: Byte;
 begin
@@ -331,7 +331,7 @@ begin
 end;
 
 // Read Len bytes as a String from file F
-function ReadString(F: TFileStream; Len: Integer = 1): String;
+function ReadString(F: TStream; Len: Integer = 1): String;
 var
   Buffer: Array of Byte;
 begin
@@ -341,7 +341,7 @@ begin
 end;
 
 // Read Len bytes as a UTF-16LE string from file F, re-encoded into Charset
-function ReadUnicodeString(F: TFileStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
+function ReadUnicodeString(F: TStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
 var
   Buffer: Array of Byte;
   CodeUnitCount, i, OutLen: Integer;
@@ -424,7 +424,7 @@ begin
 end;
 
 // Read 2 bytes as *little endian* SmallInt from file F
-function ReadLESmallInt(F: TFileStream): SmallInt;
+function ReadLESmallInt(F: TStream): SmallInt;
 var
   Buffer: Array[0..1] of Byte;
 begin
@@ -433,7 +433,7 @@ begin
 end;
 
 // Read 4 bytes as *little endian* LongInt from file F
-function ReadLELongInt(F: TFileStream): LongInt;
+function ReadLELongInt(F: TStream): LongInt;
 var
   Buffer: Array[0..3] of Byte;
 begin
@@ -443,7 +443,7 @@ begin
 end;
 
 // Read 2 bytes as *little endian* Word from file F
-function ReadLEWord(F: TFileStream): Word;
+function ReadLEWord(F: TStream): Word;
 var
   Buffer: Array[0..1] of Byte;
 begin
@@ -452,7 +452,7 @@ begin
 end;
 
 // Read 4 bytes as *little endian* LongWord from file F
-function ReadLECardinal(F: TFileStream): LongWord;
+function ReadLECardinal(F: TStream): LongWord;
 var
   Buffer: Array[0..3] of Byte;
 begin
@@ -462,7 +462,7 @@ begin
 end;
 
 // Read 4 bytes as *little endian* Single from file F
-function ReadLEFloat(F: TFileStream): Single;
+function ReadLEFloat(F: TStream): Single;
 var
   Buffer: Array[0..3] of Byte;
 begin
@@ -471,7 +471,7 @@ begin
 end;
 
 // Read 8 bytes as *little endian* Double from file F
-function ReadLEDouble(F: TFileStream): Double;
+function ReadLEDouble(F: TStream): Double;
 var
   Buffer: Array[0..7] of Byte;
 begin
@@ -902,6 +902,8 @@ begin
 end;
 
 procedure TSciDM3.SetFileName(Value: String);
+var
+  DiskFile: TFileStream;
 begin
   if (Value <> FFileName) then
   begin
@@ -919,7 +921,20 @@ begin
     // Open file for reading
     if FileExists(FFileName) then
     begin
-      FFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+      // Load the file into mamory, for faster loading
+      DiskFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+      try
+        FFile := TMemoryStream.Create;
+        try
+          TMemoryStream(FFile).CopyFrom(DiskFile, DiskFile.Size);
+        except
+          FreeAndNil(FFile);
+          raise;
+        end;
+      finally
+        DiskFile.Free;
+      end;
+      FFile.Position := 0;
       FIsOpen := True;
     end
     else
