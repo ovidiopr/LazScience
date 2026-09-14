@@ -93,7 +93,7 @@ const
                                    -1.3257931636E-09,
                                     1.5668291901E-12,
                                    -1.6944529240E-15,
-                                    6.2290347094E-19);
+                                    6.2990347094E-19);
   // For temperatures between 630.615 and 1820 degC
   CoeffsB: array[0..8] of Double = (-3.8938168621E+00,
                                      2.8571747470E-02,
@@ -273,7 +273,7 @@ begin
   VoltCorrect := Voltage + CelsiusToVoltageTypeE(Tcj);
   if (VoltCorrect < -8.825) or (VoltCorrect > 76.373) then
     Result := NaN
-  else if (VoltCorrect < 11.3) then
+  else if (VoltCorrect < 0.0) then
     Result := PolyEval(CoeffsA, VoltCorrect)
   else
     Result := PolyEval(CoeffsB, VoltCorrect);
@@ -281,7 +281,7 @@ end;
 
 function CelsiusToVoltageTypeJ(const Temperature: Double): Double;
 const
-  // For temperatures between -210 and 1200 degC
+  // For temperatures between -210 and 760 degC
   CoeffsA: array[0..8] of Double = (0.000000000000E+00,
                                     0.503811878150E-01,
                                     0.304758369300E-04,
@@ -291,11 +291,20 @@ const
                                     0.209480906970E-15,
                                    -0.125383953360E-18,
                                     0.156317256970E-22);
+  // For temperatures between 760 and 1200 degC
+  CoeffsB: array[0..5] of Double = (2.9645625681E+02,
+                                    -1.4976127786E+00,
+                                     3.1787103924E-03,
+                                    -3.1847686701E-06,
+                                     1.5720819004E-09,
+                                    -3.0691369056E-13);
 begin
   if (Temperature < -210.0) or (Temperature > 1200.0) then
     Result := NaN
+  else if (Temperature < 760.0) then
+    Result := PolyEval(CoeffsA, Temperature)
   else
-    Result := PolyEval(CoeffsA, Temperature);
+    Result := PolyEval(CoeffsB, Temperature);
 end;
 
 function VoltageToCelsiusTypeJ(const Voltage: Double; const Tcj: Double = 0.0): Double;
@@ -321,14 +330,13 @@ const
                                     3.585153E-06,
                                    -5.344285E-08,
                                     5.099890E-10);
-  // For temperatures between 500 and 1372 degC, error = 0.06
-  CoeffsC: array[0..6] of Double = (-1.3180580E+02,
-                                     4.8302220E+01,
-                                    -1.6460310E+00,
-                                     5.4647310E-02,
-                                    -9.6507150E-04,
-                                     8.8021930E-06,
-                                    -3.1108100E-08);
+  // For temperatures between 760 and 1200 degC, error = 0.04
+  CoeffsC: array[0..5] of Double = (-3.11358187E+03,
+                                     3.00543684E+02,
+                                    -9.9477323E+00,
+                                     1.7027663E-01,
+                                    -1.43033468E-03,
+                                     4.73886084E-06);
 begin
   VoltCorrect := Voltage + CelsiusToVoltageTypeJ(Tcj);
   if (VoltCorrect < -8.095) or (VoltCorrect > 69.553) then
@@ -422,8 +430,18 @@ end;
 
 function CelsiusToVoltageTypeN(const Temperature: Double): Double;
 const
-  // For temperatures between -270 and 1300 degC
-  CoeffsA: array[0..10] of Double = (0.000000000000E+00,
+  // For temperatures between -270 and 0 degC
+  CoeffsA: array[0..8] of Double = (0.000000000000E+00,
+                                    0.261591059620E-01,
+                                    0.109574842280E-04,
+                                   -0.938411115540E-07,
+                                   -0.464120397590E-10,
+                                   -0.263033577160E-11,
+                                   -0.226534380030E-13,
+                                   -0.760893007910E-16,
+                                   -0.934196678350E-19);
+  // For temperatures between 0 and 1300 degC
+  CoeffsB: array[0..10] of Double = (0.000000000000E+00,
                                      0.259293946010E-01,
                                      0.157101418800E-04,
                                      0.438256272370E-07,
@@ -437,8 +455,10 @@ const
 begin
   if (Temperature < -270.0) or (Temperature > 1300.0) then
     Result := NaN
+  else if (Temperature < 0.0) then
+    Result := PolyEval(CoeffsA, Temperature)
   else
-    Result := PolyEval(CoeffsA, Temperature);
+    Result := PolyEval(CoeffsB, Temperature);
 end;
 
 function VoltageToCelsiusTypeN(const Voltage: Double; const Tcj: Double = 0.0): Double;
@@ -486,7 +506,7 @@ end;
 
 function CelsiusToVoltageTypeR(const Temperature: Double): Double;
 const
-  // For temperatures between -50 and 1768 degC
+  // For temperatures between -50 and 1064.18 degC
   CoeffsA: array[0..9] of Double = (0.000000000000E+00,
                                     0.528961729765E-02,
                                     0.139166589782E-04,
@@ -497,11 +517,28 @@ const
                                    -0.373105886191E-19,
                                     0.157716482367E-22,
                                    -0.281038625251E-26);
+  // For temperatures between 1064.18 and 1664.5 degC
+  CoeffsB: array[0..5] of Double = (2.95157925316E+00,
+                                   -2.52061251332E-03,
+                                    1.59564501865E-05,
+                                   -7.64085947576E-09,
+                                    2.05305291024E-12,
+                                   -2.93359668173E-16);
+  // For temperatures between 1664.5 and 1768.1 degC
+  CoeffsC: array[0..4] of Double = (1.52232118209E+02,
+                                   -2.68819888545E-01,
+                                    1.71280280471E-04,
+                                   -3.45895706453E-08,
+                                   -9.34633971046E-15);
 begin
-  if (Temperature < -50.0) or (Temperature > 1768.0) then
+  if (Temperature < -50.0) or (Temperature > 1768.1) then
     Result := NaN
+  else if (Temperature < 1064.18) then
+    Result := PolyEval(CoeffsA, Temperature)
+  else if (Temperature < 1664.5) then
+    Result := PolyEval(CoeffsB, Temperature)
   else
-    Result := PolyEval(CoeffsA, Temperature);
+    Result := PolyEval(CoeffsC, Temperature);
 end;
 
 function VoltageToCelsiusTypeR(const Voltage: Double; const Tcj: Double = 0.0): Double;
@@ -560,7 +597,7 @@ end;
 
 function CelsiusToVoltageTypeS(const Temperature: Double): Double;
 const
-  // For temperatures between -50 and 1768 degC
+  // For temperatures between -50 and 1064.18 degC
   CoeffsA: array[0..8] of Double = (0.000000000000E+00,
                                     0.540313308631E-02,
                                     0.125934289740E-04,
@@ -570,11 +607,27 @@ const
                                     0.255744251786E-16,
                                    -0.125068871393E-19,
                                     0.271443176145E-23);
+  // For temperatures between 1064.18 and 1664.5 degC
+  CoeffsB: array[0..4] of Double = (1.32900444085E+00,
+                                    0.334509311344E-02,
+                                    0.654805192818E-05,
+                                   -0.164856259209E-08,
+                                    0.129989605174E-13);
+  // For temperatures between 1664.5 and 1768.1 degC
+  CoeffsC: array[0..4] of Double = (1.46628232636E+02,
+                                   -0.258430516752E+00,
+                                    0.163693574641E-03,
+                                   -0.330439046987E-07,
+                                   -0.943223690612E-14);
 begin
-  if (Temperature < -50.0) or (Temperature > 1768.0) then
+  if (Temperature < -50.0) or (Temperature > 1768.1) then
     Result := NaN
+  else if (Temperature < 1064.18) then
+    Result := PolyEval(CoeffsA, Temperature)
+  else if (Temperature < 1664.5) then
+    Result := PolyEval(CoeffsB, Temperature)
   else
-    Result := PolyEval(CoeffsA, Temperature);
+    Result := PolyEval(CoeffsC, Temperature);
 end;
 
 function VoltageToCelsiusTypeS(const Voltage: Double; const Tcj: Double = 0.0): Double;
@@ -632,8 +685,24 @@ end;
 
 function CelsiusToVoltageTypeT(const Temperature: Double): Double;
 const
-  // For temperatures between -270 and 400 degC
-  CoeffsA: array[0..8] of Double = (0.000000000000E+00,
+  // For temperatures between -270 and 0 degC
+  CoeffsA: array[0..14] of Double = (0.000000000000E+00,
+                                     0.387481063640E-01,
+                                     0.441944343470E-04,
+                                     0.118443231050E-06,
+                                     0.200329735540E-07,
+                                     0.901380195590E-09,
+                                     0.226511565930E-10,
+                                     0.360711542050E-12,
+                                     0.384939398830E-14,
+                                     0.282135219250E-16,
+                                     0.142515947790E-18,
+                                     0.487686622860E-21,
+                                     0.107955392700E-23,
+                                     0.139450270620E-26,
+                                     0.797951539270E-30);
+  // For temperatures between 0 and 400 degC
+  CoeffsB: array[0..8] of Double = (0.000000000000E+00,
                                     0.387481063640E-01,
                                     0.332922278800E-04,
                                     0.206182434040E-06,
@@ -645,8 +714,10 @@ const
 begin
   if (Temperature < -270.0) or (Temperature > 400.0) then
     Result := NaN
+  else if (Temperature < 0.0) then
+    Result := PolyEval(CoeffsA, Temperature)
   else
-    Result := PolyEval(CoeffsA, Temperature);
+    Result := PolyEval(CoeffsB, Temperature);
 end;
 
 function VoltageToCelsiusTypeT(const Voltage: Double; const Tcj: Double = 0.0): Double;
