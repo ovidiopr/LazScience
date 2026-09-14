@@ -9,7 +9,7 @@ interface
 
 uses
   uSciEdit, uSciPID, uSciReader, uSciReaderDlg, uSciThermoCouple, uSciDM3, 
-  LazarusPackageIntf;
+  uSciDM3Connector, LazarusPackageIntf;
 
 implementation
 
@@ -21,6 +21,7 @@ begin
   RegisterUnit('uSciReaderDlg', @uSciReaderDlg.Register);
   RegisterUnit('uSciThermoCouple', @uSciThermoCouple.Register);
   RegisterUnit('uSciDM3', @uSciDM3.Register);
+  RegisterUnit('uSciDM3Connector', @uSciDM3Connector.Register);
 end;
 
 initialization

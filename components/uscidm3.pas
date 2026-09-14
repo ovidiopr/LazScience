@@ -15,6 +15,8 @@
 //  Format: http://www.er-c.org/cbb/info/dmformat/                          //
 //          https://imagej.nih.gov/ij/plugins/DM3Format.gj.html             //
 //                                                                          //
+//  2026-09-14 Complete rewrite of the component, now divided in a parser   //
+//             (non-gui) and a Connector; bug fixes (Ovidio)                //
 //  2024-10-05 Ported to Pascal                                             //
 //  2018-02-26 Made the library compatible with Python 3 (Ovidio)           //
 //  2018-02-19 Added support for various data types (Ovidio)                //
@@ -27,8 +29,7 @@ unit uSciDM3;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, Graphics, Dialogs, Types,
-  IntfGraphics, Variants, Math;
+  Classes, SysUtils, Types, Graphics, IntfGraphics, Variants, Math;
 
 const
   // Constants for encoded data types
@@ -92,7 +93,7 @@ const
 
   DEFAULTCHARSET = 'UTF-8';
 
-  VERSION = '1.1';
+  VERSION = '1.2';
 
   // END constants
 
@@ -100,8 +101,6 @@ type
   TIntegerArray = Array of Integer;
 
   TImageData = Array of Array of Array of Variant;
-
-  TReadFunc = function(F: TFileStream): Variant;
 
   TDataType = (NULL_DATA, SIGNED_INT16_DATA, REAL4_DATA, COMPLEX8_DATA,
                OBSOLETE_DATA, PACKED_DATA, UNSIGNED_INT8_DATA,
@@ -128,7 +127,9 @@ type
     Units: String;
   end;
 
-  TPrintMessageEvent = procedure(Sender: TObject; Msg: String; MsgType: TMsgDlgType) of Object;
+  TSciMsgType = (smInfo, smWarning, smError);
+
+  TPrintMessageEvent = procedure(Sender: TObject; Msg: String; MsgType: TSciMsgType) of Object;
 
   TSciDM3 = class(TComponent)
   private
@@ -140,7 +141,6 @@ type
     FAutoParse: Boolean;
     FDataType: TDataType;
     FChosenImage: Integer;
-    FTagsTreeView: TTreeView;
     FCurGroupLevel: Integer;
     FCurGroupAtLevelX: Array[0..MAXDEPTH - 1] of Integer;
     FCurGroupNameAtLevelX: Array[0..MAXDEPTH - 1] of String;
@@ -155,22 +155,25 @@ type
 
     FOnPrintMessage: TPrintMessageEvent;
 
+    FDataChangeListeners: Array of TNotifyEvent;
+
     function MakeGroupString: String;
     function MakeGroupNameString: String;
-    function ReadTagGroup(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
-    function ReadTagEntry(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
-    function ReadTagType(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+    function ReadTagGroup: Integer;
+    function ReadTagEntry: Integer;
+    function ReadTagType: Integer;
     function EncodedTypeSize(EncType: Integer): Integer;
-    function ReadAnyData(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+    function ReadAnyData: Integer;
     function ReadNativeData(EncodedType, ETSize: Integer): Variant;
-    function ReadStringData(StringSize: Integer; TheTree: TTreeView; ParentNode: TTreeNode): String;
+    function ReadStringData(StringSize: Integer): String;
     function ReadArrayTypes: TIntegerArray;
-    function ReadArrayData(ArrayTypes: TIntegerArray; TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+    function ReadArrayData(ArrayTypes: TIntegerArray): Integer;
     function ReadStructTypes: TIntegerArray;
-    function ReadStructData(StructTypes: TIntegerArray; TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+    function ReadStructData(StructTypes: TIntegerArray): Integer;
     function StoreTag(TagName: String; TagValue: Variant): String;
 
     procedure ReadImageData;
+    procedure DoDataChanged;
 
     function GetOutputCharset: String;
     procedure SetOutputCharset(const Value: String);
@@ -195,22 +198,24 @@ type
 
     procedure SetFileName(Value: String);
     procedure SetChosenImage(Value: Integer);
-    procedure SetTagsTreeView(Value: TTreeView);
 
   public
     constructor Create(AOwner: TComponent); override;
     constructor CreateFile(AOwner: TComponent; const AFileName: String; ADebugLevel: Integer = 0);
     destructor Destroy; override;
 
-    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-
-    procedure ParseDM3(TheTree: TTreeView = Nil);
+    procedure ParseDM3;
 
     function PNGThumbnail: TPortableNetworkGraphic;
 
     procedure DumpTags(const DumpDir: String);
 
-    // Read-only results of parsing the file, and the actions that produce them.
+    function PixelValue(X, Y, Z: Integer): Double;
+
+    procedure RegisterDataChangeListener(AListener: TNotifyEvent);
+    procedure UnregisterDataChangeListener(AListener: TNotifyEvent);
+
+    // Read-only results of parsing the file
     property IsOpen: Boolean read FIsOpen;
     property IsParsed: Boolean read FIsParsed;
     property DataType: TDataType read FDataType;
@@ -236,14 +241,8 @@ type
     property FileName: String read GetFileName write SetFilename;
     property DebugLevel: Integer read FDebugLevel write FDebugLevel default 0;
     property OutputCharset: String read GetOutputCharset write SetOutputCharset;
-    // Which image to expose (for multi-image DM3/DM4 files); changing it
-    // while a file is already parsed re-reads ImageData for the new index.
     property ChosenImage: Integer read FChosenImage write SetChosenImage default 1;
-    // When True, setting FileName at runtime automatically calls ParseDM3.
     property AutoParse: Boolean read FAutoParse write FAutoParse default False;
-    // Optional: a TTreeView to populate live with the tag structure while
-    // parsing, used whenever ParseDM3 is called without an explicit one.
-    property TagsTreeView: TTreeView read FTagsTreeView write SetTagsTreeView;
     property OnPrintMessage: TPrintMessageEvent read FOnPrintMessage write FOnPrintMessage;
   end;
 
@@ -278,6 +277,8 @@ function ReadLECardinal(F: TFileStream): LongWord;
 function ReadLEFloat(F: TFileStream): Single;
 // Read 8 bytes as *little endian* Double from file F
 function ReadLEDouble(F: TFileStream): Double;
+
+function NormalizePixelValue(RawValue, LowLimit, HighLimit: Double): Byte;
 
 implementation
 
@@ -346,7 +347,7 @@ var
   CodeUnitCount, i: Integer;
   CodePoint, HighSurrogate: Cardinal;
 
-  // Appends the UTF-8 encoding of a single Unicode code point to Result.
+  // Appends the UTF-8 encoding of a single Unicode code point to Result
   procedure AppendUTF8(CP: Cardinal);
   begin
     if CP <= $7F then
@@ -391,7 +392,7 @@ begin
   begin
     CodePoint := Buffer[2*i] or (Buffer[2*i + 1] shl 8);
 
-    // Combine a UTF-16 surrogate pair into a single code point.
+    // Combine a UTF-16 surrogate pair into a single code point
     if (CodePoint >= $D800) and (CodePoint <= $DBFF) and (i + 1 < CodeUnitCount) then
     begin
       HighSurrogate := CodePoint;
@@ -463,8 +464,17 @@ end;
 
 // End of binary data reading functions
 
+function NormalizePixelValue(RawValue, LowLimit, HighLimit: Double): Byte;
+begin
+  if RawValue <= LowLimit then
+    Result := 0
+  else if RawValue >= HighLimit then
+    Result := 255
+  else
+    Result := Round(255*(RawValue - LowLimit)/(HighLimit - LowLimit));
+end;
 
-// TSciDM3 class: parses DM3 file.
+// TSciDM3 class: parses DM3 file
 constructor TSciDM3.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -485,8 +495,6 @@ begin
   FTagDict.Sorted := True;
 end;
 
-// Convenience constructor for creating and opening a file in one call from
-// code (e.g. AOwner = Nil for a standalone parser, no need to drop it on a form).
 constructor TSciDM3.CreateFile(AOwner: TComponent; const AFileName: String; ADebugLevel: Integer = 0);
 begin
   Create(AOwner);
@@ -504,13 +512,6 @@ begin
   FTagDict.Free;
 
   inherited Destroy;
-end;
-
-procedure TSciDM3.Notification(AComponent: TComponent; Operation: TOperation);
-begin
-  inherited Notification(AComponent, Operation);
-  if (Operation = opRemove) and (AComponent = FTagsTreeView) then
-    FTagsTreeView := Nil;
 end;
 
 function TSciDM3.MakeGroupString: String;
@@ -531,7 +532,7 @@ begin
     Result := Format('%s.%s', [Result, FCurGroupNameAtLevelX[i]]);
 end;
 
-function TSciDM3.ReadTagGroup(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadTagGroup: Integer;
 var
   IsGroupSorted, IsGroupOpen: Boolean;
   NumTags, i: Integer;
@@ -547,7 +548,7 @@ begin
   FCurTagAtLevelX[FCurGroupLevel] := -1;
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rTG: Current Group Level: %d', [FCurGroupLevel]), mtInformation);
+    OnPrintMessage(Self, Format('rTG: Current Group Level: %d', [FCurGroupLevel]), smInfo);
 
   // Is the group sorted?
   IsGroupSorted := ReadBool(FFile);
@@ -557,22 +558,21 @@ begin
   NumTags := ReadLongInt(FFile);
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rTG: Iterating over the %d tag entries in this group', [NumTags]), mtInformation);
+    OnPrintMessage(Self, Format('rTG: Iterating over the %d tag entries in this group', [NumTags]), smInfo);
 
   // Read Tags
   for i := 0 to NumTags - 1 do
-    ReadTagEntry(TheTree, ParentNode);
+    ReadTagEntry;
   // Go back up one level as reading group is finished
   Dec(FCurGroupLevel);
   Result := 1;
 end;
 
-function TSciDM3.ReadTagEntry(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadTagEntry: Integer;
 var
   IsData: Boolean;
   LenTagLabel: Integer;
   TagLabel: String;
-  ChildNode: TTreeNode;
 begin
   // Is data or a new group?
   IsData := (ReadShortInt(FFile) = 21);
@@ -586,19 +586,16 @@ begin
 
   if assigned(OnPrintMessage) then
     if (DebugLevel > 5) then
-      OnPrintMessage(Self, Format('%i | %s:\nTag label = %s', [FCurGroupLevel, MakeGroupString, TagLabel]), mtInformation)
+      OnPrintMessage(Self, Format('%i | %s:\nTag label = %s', [FCurGroupLevel, MakeGroupString, TagLabel]), smInfo)
     else if (DebugLevel > 0) then
-      OnPrintMessage(Self, Format('%i: Tag label = %s', [FCurGroupLevel, TagLabel]), mtInformation);
+      OnPrintMessage(Self, Format('%i: Tag label = %s', [FCurGroupLevel, TagLabel]), smInfo);
 
   if IsData then
   begin
     // Give it a name
     FCurTagName := Format('%s.%s', [MakeGroupNameString, TagLabel]);
-    //Add it to the TTreeView
-    if assigned(TheTree) and assigned(ParentNode) then
-      ChildNode := TheTree.Items.AddChild(ParentNode, TagLabel);
     // Read it
-    ReadTagType(TheTree, ChildNode);
+    ReadTagType;
   end
   else
   begin
@@ -607,14 +604,12 @@ begin
       raise Exception.CreateFmt('%x: Tag group nesting exceeds MAXDEPTH (%d)',
                                 [FFile.Position, MAXDEPTH]);
     FCurGroupNameAtLevelX[FCurGroupLevel + 1] := TagLabel;
-    if assigned(TheTree) and assigned(ParentNode) then
-      ChildNode := TheTree.Items.AddChild(ParentNode, TagLabel);
-    ReadTagGroup(TheTree, ChildNode); // Increments FCurGroupLevel
+    ReadTagGroup; // Increments FCurGroupLevel
   end;
   Result := 1;
 end;
 
-function TSciDM3.ReadTagType(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadTagType: Integer;
 var
   Delim: String;
   NumInTag: LongInt;
@@ -623,7 +618,7 @@ begin
   if Delim <> '%%%%' then
     raise Exception.Create(Format('%x: Tag Type delimiter not %%%%', [FFile.Position]));
   NumInTag := ReadLongInt(FFile);
-  ReadAnyData(TheTree, ParentNode);
+  ReadAnyData;
   Result := 1;
 end;
 
@@ -640,14 +635,13 @@ begin
   end;
 end;
 
-function TSciDM3.ReadAnyData(TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadAnyData: Integer;
 var
   EncodedType,
   StringSize: Integer;
   ArrayTypes,
   StructTypes: TIntegerArray;
   ETSize: Integer;
-  S: String;
 begin
   // Higher level function dispatching to handling data types to other functions
   // Get Type category (short, long, array...)
@@ -657,31 +651,26 @@ begin
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
     OnPrintMessage(Self, Format('rAnD, %x:\tTag Type = %d\tTag Size = %d',
-                                [FFile.Position, EncodedType, ETSize]), mtInformation);
+                                [FFile.Position, EncodedType, ETSize]), smInfo);
 
   if ETSize > 0 then
-  begin
-    S := StoreTag(FCurTagName, ReadNativeData(EncodedType, ETSize));
-    // Add the Tag value to the TTreeView
-    if assigned(TheTree) and assigned(ParentNode) then
-      TheTree.Items.AddChild(ParentNode, S);
-  end
+    StoreTag(FCurTagName, ReadNativeData(EncodedType, ETSize))
   else
     case EncodedType of
       STRING_DATA: begin
         StringSize := ReadLongInt(FFile);
-        ReadStringData(StringSize, TheTree, ParentNode);
+        ReadStringData(StringSize);
       end;
       STRUCT_DATA: begin
         // Does not store tags yet
         StructTypes := ReadStructTypes;
-        ReadStructData(StructTypes, TheTree, ParentNode)
+        ReadStructData(StructTypes)
       end;
       ARRAY_DATA: begin
         // Does not store tags yet
         // Indicates size of skipped data blocks
         ArrayTypes := ReadArrayTypes;
-        ReadArrayData(ArrayTypes, TheTree, ParentNode);
+        ReadArrayData(ArrayTypes);
       end;
       else
         raise Exception.Create(Format('rAnD, %x: Can''t understand encoded type', [FFile.Position]));
@@ -710,34 +699,31 @@ begin
 
   if assigned(OnPrintMessage) then
     if DebugLevel > 3 then
-      OnPrintMessage(Self, Format('rND, %x: %s', [FFile.Position, VarToStr(Result)]), mtInformation)
+      OnPrintMessage(Self, Format('rND, %x: %s', [FFile.Position, VarToStr(Result)]), smInfo)
     else if DebugLevel > 0 then
-      OnPrintMessage(Self, VarToStr(Result), mtInformation);
+      OnPrintMessage(Self, VarToStr(Result), smInfo);
 end;
 
-function TSciDM3.ReadStringData(StringSize: Integer; TheTree: TTreeView; ParentNode: TTreeNode): String;
+function TSciDM3.ReadStringData(StringSize: Integer): String;
 begin
   if StringSize <= 0 then
     Result := ''
   else
   begin
     if (DebugLevel > 3) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('rSD @ %s/%x:', [IntToStr(FFile.Position), FFile.Position]), mtInformation);
+      OnPrintMessage(Self, Format('rSD @ %s/%x:', [IntToStr(FFile.Position), FFile.Position]), smInfo);
 
     Result := ReadUnicodeString(FFile, StringSize, FOutputCharset);
     //Result := ReadString(FFile, StringSize);
 
     if (DebugLevel > 3) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Result + '   <' + Result + '>', mtInformation);
+      OnPrintMessage(Self, Result + '   <' + Result + '>', smInfo);
   end;
 
   if (DebugLevel > 0) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, 'StringVal: ' + Result, mtInformation);
+    OnPrintMessage(Self, 'StringVal: ' + Result, smInfo);
 
   StoreTag(FCurTagName, Result);
-  // Finally, add the value to the TTreeView
-  if assigned(TheTree) and assigned(ParentNode) then
-    TheTree.Items.AddChild(ParentNode, Result);
 end;
 
 function TSciDM3.ReadArrayTypes: TIntegerArray;
@@ -759,17 +745,16 @@ begin
   end;
 end;
 
-function TSciDM3.ReadArrayData(ArrayTypes: TIntegerArray; TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadArrayData(ArrayTypes: TIntegerArray): Integer;
 var
-  ArraySize, ItemSize, EncodedType, ETSize, BufSize, i: Integer;
-  S1, S2: String;
-  ChildNode: TTreeNode;
+  ArraySize, ItemSize, EncodedType, ETSize, BufSize: Integer;
+  i: Integer;
 begin
   // Reads array data
   ArraySize := ReadLongInt(FFile);
 
   if (DebugLevel > 3) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rArD, %x: Reading array of size = %d', [FFile.Position, ArraySize]), mtInformation);
+    OnPrintMessage(Self, Format('rArD, %x: Reading array of size = %d', [FFile.Position, ArraySize]), smInfo);
 
   ItemSize := 0;
   EncodedType := 0;
@@ -780,36 +765,33 @@ begin
     ETSize := EncodedTypeSize(EncodedType);
     Inc(ItemSize, ETSize);
     if (DebugLevel > 5) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('rArD: Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), mtInformation);
+      OnPrintMessage(Self, Format('rArD: Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), smInfo);
   end;
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rArD: Array Item Size = %d', [ItemSize]), mtInformation);
+    OnPrintMessage(Self, Format('rArD: Array Item Size = %d', [ItemSize]), smInfo);
 
   BufSize := ArraySize*ItemSize;
+
+  // Guard against a corrupt/malicious file
+  if (ArraySize < 0) or (BufSize < 0) or (BufSize > FFile.Size - FFile.Position) then
+    raise Exception.CreateFmt('%x: Array size (%d bytes) exceeds remaining file size',
+                              [FFile.Position, BufSize]);
 
   if (not FCurTagName.EndsWith('ImageData.Data')) and (Length(ArrayTypes) = 1) and
      (EncodedType = USHORT_DATA) and (ArraySize < 256) then
   begin
     // Treat as String
-    ReadStringData(BufSize, TheTree, ParentNode);
+    ReadStringData(BufSize);
   end
   else
   begin
     // Treat as binary data
     // Store data size and offset as tags
-    S1 := StoreTag(FCurTagName + '.Size', BufSize);
-    S2 := StoreTag(FCurTagName + '.Offset', FFile.Position);
+    StoreTag(FCurTagName + '.Size', BufSize);
+    StoreTag(FCurTagName + '.Offset', FFile.Position);
     // Skip data w/o reading
     FFile.Seek(BufSize, soFromCurrent);
-    // Add info to TTreeView
-    if assigned(TheTree) and assigned(ParentNode) then
-    begin
-      ChildNode := TheTree.Items.AddChild(ParentNode, 'Size');
-      TheTree.Items.AddChild(ChildNode, S1);
-      ChildNode := TheTree.Items.AddChild(ParentNode, 'Offset');
-      TheTree.Items.AddChild(ChildNode, S2);
-    end;
   end;
 
   Result := 1;
@@ -822,13 +804,13 @@ begin
   // Analyzes data types in a struct
 
   if (DebugLevel > 3) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('Reading Struct Types at Pos = %x', [FFile.Position]), mtInformation);
+    OnPrintMessage(Self, Format('Reading Struct Types at Pos = %x', [FFile.Position]), smInfo);
 
   StructNameLength := ReadLongInt(FFile);
   NumFields := ReadLongInt(FFile);
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('NumFields = %d', [NumFields]), mtInformation);
+    OnPrintMessage(Self, Format('NumFields = %d', [NumFields]), smInfo);
 
   if NumFields > 100 then
     raise Exception.CreateFmt('%x: Too many fields', [FFile.Position]);
@@ -838,15 +820,14 @@ begin
   begin
     NameLength := ReadLongInt(FFile);
     if (DebugLevel > 9) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('%dth NameLength = %d', [i, NameLength]), mtInformation);
-    // Struct fields are normally unnamed (NameLength = 0) in DM3 files, but
-    // skip over any name bytes if present so the stream stays in sync
-    // instead of silently misreading everything that follows.
+      OnPrintMessage(Self, Format('%dth NameLength = %d', [i, NameLength]), smInfo);
+    // Struct fields are normally unnamed (NameLength = 0) in DM3 files,
+    // skip over any name bytes so the stream stays in sync
     if NameLength > 0 then
     begin
       if assigned(OnPrintMessage) then
         OnPrintMessage(Self, Format('%x: Unexpected named struct field (length %d), skipping name.',
-                                    [FFile.Position, NameLength]), mtWarning);
+                                    [FFile.Position, NameLength]), smWarning);
       FFile.Seek(NameLength, soFromCurrent);
     end;
     FieldType := ReadLongInt(FFile);
@@ -854,10 +835,9 @@ begin
   end;
 end;
 
-function TSciDM3.ReadStructData(StructTypes: TIntegerArray; TheTree: TTreeView; ParentNode: TTreeNode): Integer;
+function TSciDM3.ReadStructData(StructTypes: TIntegerArray): Integer;
 var
   i, EncodedType, ETSize: Integer;
-  S: String;
 begin
   // Reads struct data based on type info in StructType
   for i := 0 to High(StructTypes) do
@@ -866,14 +846,10 @@ begin
     ETSize := EncodedTypeSize(EncodedType);
 
     if (DebugLevel > 5) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), mtInformation);
+      OnPrintMessage(Self, Format('Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), smInfo);
 
     // Get data
-    //ReadNativeData(EncodedType, ETSize);
-    S := StoreTag(FCurTagName, ReadNativeData(EncodedType, ETSize));
-    // Add the Tag value to the TTreeView
-    if assigned(TheTree) and assigned(ParentNode) then
-      TheTree.Items.AddChild(ParentNode, S);
+    StoreTag(FCurTagName, ReadNativeData(EncodedType, ETSize));
   end;
 
   Result := 1;
@@ -892,7 +868,7 @@ begin
 
   // Store Tags as StringList
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('%s = %s', [TagName,  Result]), mtInformation);
+    OnPrintMessage(Self, Format('%s = %s', [TagName,  Result]), smInfo);
 
   FStoredTags.Add(Format('%s = %s', [TagName, Result]));
   FTagDict.AddPair(TagName, Result);
@@ -916,7 +892,7 @@ begin
     FIsParsed := False;
 
     // Don't touch the filesystem while the component is being placed/edited
-    // on a form in the IDE - only open the file at run time.
+    // on a form in the IDE - only open the file at run time
     if (csDesigning in ComponentState) then
       Exit;
 
@@ -933,7 +909,7 @@ begin
       FIsOpen := False;
 
     if FAutoParse and FIsOpen then
-      ParseDM3(FTagsTreeView);
+      ParseDM3;
   end;
 end;
 
@@ -942,30 +918,68 @@ begin
   if (Value <> FChosenImage) then
   begin
     FChosenImage := Value;
-    // Re-read pixel data for the newly selected image, if we already have a
-    // parsed tag tree to read it from.
+    // Re-read pixel data for the newly selected image, if we can
     if IsOpen and IsParsed then
+    begin
       ReadImageData;
+      DoDataChanged;
+    end;
   end;
 end;
 
-procedure TSciDM3.SetTagsTreeView(Value: TTreeView);
+function SameNotifyEvent(const A, B: TNotifyEvent): Boolean;
 begin
-  if (FTagsTreeView <> Value) then
-  begin
-    if assigned(FTagsTreeView) then
-      FTagsTreeView.RemoveFreeNotification(Self);
-    FTagsTreeView := Value;
-    if assigned(FTagsTreeView) then
-      FTagsTreeView.FreeNotification(Self);
-  end;
+  Result := (TMethod(A).Code = TMethod(B).Code) and (TMethod(A).Data = TMethod(B).Data);
+end;
+
+procedure TSciDM3.RegisterDataChangeListener(AListener: TNotifyEvent);
+var
+  i: Integer;
+begin
+  for i := 0 to High(FDataChangeListeners) do
+    if SameNotifyEvent(FDataChangeListeners[i], AListener) then
+      Exit; // already registered
+  SetLength(FDataChangeListeners, Length(FDataChangeListeners) + 1);
+  FDataChangeListeners[High(FDataChangeListeners)] := AListener;
+end;
+
+procedure TSciDM3.UnregisterDataChangeListener(AListener: TNotifyEvent);
+var
+  i, j: Integer;
+begin
+  for i := 0 to High(FDataChangeListeners) do
+    if SameNotifyEvent(FDataChangeListeners[i], AListener) then
+    begin
+      for j := i to High(FDataChangeListeners) - 1 do
+        FDataChangeListeners[j] := FDataChangeListeners[j + 1];
+      SetLength(FDataChangeListeners, Length(FDataChangeListeners) - 1);
+      Exit;
+    end;
+end;
+
+procedure TSciDM3.DoDataChanged;
+var
+  i: Integer;
+begin
+  for i := 0 to High(FDataChangeListeners) do
+    if assigned(FDataChangeListeners[i]) then
+      FDataChangeListeners[i](Self);
+end;
+
+function TSciDM3.PixelValue(X, Y, Z: Integer): Double;
+begin
+  if DataType in [COMPLEX8_DATA, PACKED_DATA, COMPLEX16_DATA] then
+    Result := Ln(Sqrt(Power(FDataReal[X, Y, Z], 2) +
+                      Power(FDataImag[X, Y, Z], 2)) + 1e-30)
+  else
+    Result := FDataReal[X, Y, Z];
 end;
 
 function TSciDM3.GetImage(Index: Integer): TBitmap;
 var
   i, j, w, h: Integer;
   c: Byte;
-  data, ll, hl: Double;
+  ll, hl: Double;
   TempIntfImage: TLazIntfImage;
 begin
   Result := Nil;
@@ -989,24 +1003,8 @@ begin
     begin
       for j := 0 to h - 1 do
       begin
-        if DataType in [COMPLEX8_DATA, PACKED_DATA, COMPLEX16_DATA] then
-          // The tiny epsilon avoids Ln(0) = -Infinity for an exactly-zero complex value.
-          data := Ln(Sqrt(Power(ImageData[i, j, Index], 2) +
-                          Power(FDataImag[i, j, Index], 2)) + 1e-30)
-        else
-          data := ImageData[i, j, Index];
-
-        if (data <= ll) then
-          c := 0
-        else if (data >= hl) then
-          c := 255
-        else
-          c := Round(255*(data - ll)/(hl - ll));
-
+        c := NormalizePixelValue(PixelValue(i, j, Index), ll, hl);
         TempIntfImage.Colors[i, j] := TColorToFPColor(RGBToColor(c, c, c));
-        //Result.BeginUpdate(True);
-        //Result.Canvas.Pixels[i, j] := RGBToColor(c, c, c);
-        //Result.EndUpdate(False);
       end;
     end;
 
@@ -1043,18 +1041,12 @@ begin
   Result := FTagDict;
 end;
 
-procedure TSciDM3.ParseDM3(TheTree: TTreeView = Nil);
+procedure TSciDM3.ParseDM3;
 var
   FileVersion, FileSize: Integer;
   LittleEndian: Boolean;
   t1, t2: TDateTime;
-  StartNode : TTreeNode;
 begin
-  // Fall back to the design-time linked TagsTreeView, if any, when the
-  // caller didn't pass one explicitly.
-  if not assigned(TheTree) then
-    TheTree := FTagsTreeView;
-
   if IsOpen then
   begin
     FStoredTags.Clear;
@@ -1083,26 +1075,23 @@ begin
     if (FileVersion <> 3) or not LittleEndian then
       raise Exception.Create(Format('"%s" does not appear to be a DM3 file.', [ExtractFileName(FFileName)]))
     else if (DebugLevel > 0) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('"%s" appears to be a DM3 file', [FFileName]), mtInformation);
+      OnPrintMessage(Self, Format('"%s" appears to be a DM3 file', [FFileName]), smInfo);
 
     if (DebugLevel > 5) and assigned(OnPrintMessage) then
     begin
-      OnPrintMessage(Self, 'Header info.:', mtInformation);
-      OnPrintMessage(Self, Format('  -File version: %d', [FileVersion]), mtInformation);
-      OnPrintMessage(Self, Format('  -Little Endian: %s', [BoolToStr(LittleEndian, True)]), mtInformation);
-      OnPrintMessage(Self, Format('  -File size: %d bytes', [FileSize]), mtInformation);
+      OnPrintMessage(Self, 'Header info.:', smInfo);
+      OnPrintMessage(Self, Format('  -File version: %d', [FileVersion]), smInfo);
+      OnPrintMessage(Self, Format('  -Little Endian: %s', [BoolToStr(LittleEndian, True)]), smInfo);
+      OnPrintMessage(Self, Format('  -File size: %d bytes', [FileSize]), smInfo);
     end;
 
     // Set name of root group (contains all data)...
     FCurGroupNameAtLevelX[0] := 'root';
-    //Populate the TTreeView
-    if assigned(TheTree) then
-      StartNode := TheTree.Items.AddFirst(Nil, ExtractFileName(FFileName));
     // Read it
-    ReadTagGroup(TheTree, StartNode);
+    ReadTagGroup;
 
     if (DebugLevel > 0) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('-- %d Tags read --', [FStoredTags.Count]), mtInformation);
+      OnPrintMessage(Self, Format('-- %d Tags read --', [FStoredTags.Count]), smInfo);
 
     // Finally, read image data
     ReadImageData;
@@ -1110,10 +1099,11 @@ begin
     if (DebugLevel > 0) and assigned(OnPrintMessage) then
     begin
       t2 := Now;
-      OnPrintMessage(Self, Format('| parse DM3 file: %.3g s', [t2 - t1]), mtInformation);
+      OnPrintMessage(Self, Format('| parse DM3 file: %.3g s', [t2 - t1]), smInfo);
     end;
 
     FIsParsed := True;
+    DoDataChanged;
   end;
 end;
 
@@ -1138,12 +1128,12 @@ begin
     except
       on E: Exception do
         if assigned(OnPrintMessage) then
-          OnPrintMessage(Self, Format('Cannot generate dump file. Error: "%s"', [E.Message]), mtWarning);
+          OnPrintMessage(Self, Format('Cannot generate dump file. Error: "%s"', [E.Message]), smWarning);
     end;
   end;
 end;
 
-// Extracts useful experiment info from DM3 file.
+// Extracts useful experiment info from DM3 file
 function TSciDM3.GetInfo: TStringList;
   procedure AddItem(TagKey, TagName: String);
   begin
@@ -1159,7 +1149,7 @@ begin
   if IsOpen and IsParsed then
   begin
     // Define useful information
-    TagRoot := 'root.ImageList.1';
+    TagRoot := Format(IMGLIST + '%d', [ChosenImage]);
     BarTag := Format('%s.ImageTags.DataBar', [TagRoot]);
     MicTag := Format('%s.ImageTags.Microscope Info', [TagRoot]);
 
@@ -1190,7 +1180,7 @@ var
 begin
   if IsOpen then
   begin
-    TagRoot := Format('root.ImageList.%d.ImageData', [ChosenImage]);
+    TagRoot := Format(IMGLIST + '%d.ImageData', [ChosenImage]);
 
     DataOffset := StrToInt(Tags.Values[TagRoot + '.Data.Offset']);
     DataSize := StrToInt(Tags.Values[TagRoot + '.Data.Size']);
@@ -1215,10 +1205,10 @@ begin
 
     if (DebugLevel > 0) and assigned(OnPrintMessage) then
     begin
-      OnPrintMessage(Self, Format('Image data in "%s" starts at %X', [ExtractFileName(FFileName), DataOffset]), mtInformation);
-      OnPrintMessage(Self, Format('Image size: %d px, %d px', [ImageWidth, ImageHeight]), mtInformation);
+      OnPrintMessage(Self, Format('Image data in "%s" starts at %X', [ExtractFileName(FFileName), DataOffset]), smInfo);
+      OnPrintMessage(Self, Format('Image size: %d px, %d px', [ImageWidth, ImageHeight]), smInfo);
 
-      OnPrintMessage(Self, Format('Image data type: %d read as %s.', [DataType, DataTypes[Integer(DataType)]]), mtInformation);
+      OnPrintMessage(Self, Format('Image data type: %d read as %s.', [DataType, DataTypes[Integer(DataType)]]), smInfo);
     end;
 
     FFile.Position := DataOffset;
@@ -1407,7 +1397,7 @@ begin
   Result := Nil;
   if IsOpen and IsParsed then
   begin
-    TagRoot := 'root.ImageList.0.ImageData';
+    TagRoot := IMGLIST + '0.ImageData';
     TnSize := StrToInt(FTagDict.Values[TagRoot + '.Data.Size']);
     TnOffset := StrToInt(FTagDict.Values[TagRoot + '.Data.Offset']);
     TnWidth := StrToInt(FTagDict.Values[TagRoot + '.Dimensions.0']);
@@ -1415,8 +1405,8 @@ begin
 
     if (DebugLevel > 0) and assigned(OnPrintMessage) then
     begin
-      OnPrintMessage(Self, Format('Thumbnail data in "%s" starts at %X', [ExtractFileName(FFileName), TnOffset]), mtInformation);
-      OnPrintMessage(Self, Format('Thumbnail size: %d px, %d px', [TnWidth, TnHeight]), mtInformation);
+      OnPrintMessage(Self, Format('Thumbnail data in "%s" starts at %X', [ExtractFileName(FFileName), TnOffset]), smInfo);
+      OnPrintMessage(Self, Format('Thumbnail size: %d px, %d px', [TnWidth, TnHeight]), smInfo);
     end;
 
     if (TnWidth*TnHeight*4) <> TnSize then
@@ -1431,8 +1421,7 @@ begin
       try
         Result.Width := TnWidth;
         Result.Height := TnHeight;
-        Result.PixelFormat := pf16bit;
-        //Move(RawData[0], Result.ScanLine[0]^, TnSize);
+        Result.PixelFormat := pf32bit;
         Move(RawData[0], Result.RawImage.Data[0], TnSize);
       except
         Result.Free;
@@ -1451,8 +1440,8 @@ begin
   begin
     BmpThumbnail := GetThumbnail;
     try
-      SetLength(Result, BmpThumbnail.Width*BmpThumbnail.Height*2);
-      //Move(BmpThumbnail.ScanLine[0]^, Result[0], Length(Result));
+      // 4 bytes/pixel, matching the pf32bit format
+      SetLength(Result, BmpThumbnail.Width*BmpThumbnail.Height*4);
       Move(BmpThumbnail.RawImage.Data[0], Result[0], Length(Result));
     finally
       BmpThumbnail.Free;
@@ -1478,7 +1467,7 @@ begin
     except
       on E: Exception do
         if assigned(OnPrintMessage) then
-          OnPrintMessage(Self, Format('Could not save thumbnail. Error: "%s".', [E.Message]), mtWarning);
+          OnPrintMessage(Self, Format('Could not save thumbnail. Error: "%s".', [E.Message]), smWarning);
     end;
   end;
 end;
@@ -1490,7 +1479,7 @@ begin
   Result := -1;
   if IsOpen and IsParsed then
   begin
-    TagName := Format('root.ImageList.%d.ImageData.DataType', [ChosenImage]);
+    TagName := Format(IMGLIST + '%d.ImageData.DataType', [ChosenImage]);
     if Tags.IndexOfName(TagName) > -1 then
       Result := StrToInt(Tags.Values[TagName]);
   end;
@@ -1498,7 +1487,7 @@ end;
 
 function TSciDM3.GetLowLimit: Double;
 const
-  TagName = 'root.DocumentObjectList.0.ImageDisplayInfo.LowLimit';
+  TagName = OBJLIST + '0.ImageDisplayInfo.LowLimit';
 var
   i, j, k: Integer;
 begin
@@ -1522,7 +1511,7 @@ end;
 
 function TSciDM3.GetHighLimit: Double;
 const
-  TagName = 'root.DocumentObjectList.0.ImageDisplayInfo.HighLimit';
+  TagName = OBJLIST + '0.ImageDisplayInfo.HighLimit';
 var
   i, j, k: Integer;
 begin
@@ -1561,7 +1550,7 @@ begin
 
   if IsOpen and IsParsed then
   begin
-    TagRoot := Format('root.ImageList.%d.ImageData.Calibrations.Dimension.%d', [ChosenImage, Index]);
+    TagRoot := Format(IMGLIST + '%d.ImageData.Calibrations.Dimension.%d', [ChosenImage, Index]);
 
     with Result do
     begin
@@ -1574,7 +1563,7 @@ begin
     end;
 
     if (DebugLevel > 0) and assigned(OnPrintMessage) then
-        OnPrintMessage(Self, Format('Pixel size = %f %s', [Result.PixelSize, Result.Units]), mtInformation);
+        OnPrintMessage(Self, Format('Pixel size = %f %s', [Result.PixelSize, Result.Units]), smInfo);
   end;
 end;
 
@@ -1594,7 +1583,7 @@ begin
   Result := '';
   if IsOpen and IsParsed then
   begin
-    TagName := Format('root.ImageList.%d.ImageData.Calibrations.Brightness.Units', [ChosenImage]);
+    TagName := Format(IMGLIST + '%d.ImageData.Calibrations.Brightness.Units', [ChosenImage]);
     if Tags.IndexOfName(TagName) > -1 then
       Result := Tags.Values[TagName];
   end;

@@ -42,6 +42,11 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciDM3"/>
       </Item>
+      <Item>
+        <Filename Value="uscidm3connector.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciDM3Connector"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
