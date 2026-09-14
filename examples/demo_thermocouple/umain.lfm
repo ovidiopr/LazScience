@@ -1,0 +1,94 @@
+object Form1: TForm1
+  Left = 350
+  Height = 600
+  Top = 150
+  Width = 800
+  Caption = 'Thermocouple Curves Demo'
+  ClientHeight = 600
+  ClientWidth = 800
+  Position = poScreenCenter
+  LCLVersion = '4.6.0.0'
+  OnCreate = FormCreate
+  object PageControl1: TPageControl
+    Left = 0
+    Height = 600
+    Top = 0
+    Width = 800
+    ActivePage = TabSheet1
+    Align = alClient
+    TabIndex = 0
+    TabOrder = 0
+    object TabSheet1: TTabSheet
+      Caption = 'Temperature to Voltage (Direct)'
+      ClientHeight = 572
+      ClientWidth = 792
+      object ChartTtoV: TChart
+        Left = 0
+        Height = 572
+        Top = 0
+        Width = 792
+        AxisList = <        
+          item
+            Grid.Color = clSilver
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelFont.Orientation = 900
+            Title.Caption = 'Voltage (mV)'
+            Title.LabelBrush.Style = bsClear
+          end        
+          item
+            Grid.Color = clSilver
+            Alignment = calBottom
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.Caption = 'Temperature (°C)'
+            Title.LabelBrush.Style = bsClear
+          end>
+        Legend.Visible = True
+        Title.Brush.Style = bsClear
+        Title.Text.Strings = (
+          'TAChart'
+        )
+        Align = alClient
+      end
+    end
+    object TabSheet2: TTabSheet
+      Caption = 'Voltage to Temperature (Inverse)'
+      ClientHeight = 572
+      ClientWidth = 792
+      object ChartVtoT: TChart
+        Left = 0
+        Height = 572
+        Top = 0
+        Width = 792
+        AxisList = <        
+          item
+            Grid.Color = clSilver
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelFont.Orientation = 900
+            Title.Caption = 'Temperature (°C)'
+            Title.LabelBrush.Style = bsClear
+          end        
+          item
+            Grid.Color = clSilver
+            Alignment = calBottom
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.Caption = 'Voltage (mV)'
+            Title.LabelBrush.Style = bsClear
+          end>
+        Legend.Visible = True
+        Title.Brush.Style = bsClear
+        Title.Text.Strings = (
+          'TAChart'
+        )
+        Align = alClient
+      end
+    end
+  end
+  object SciTC: TSciThermocouple
+    Left = 72
+    Top = 520
+  end
+end
