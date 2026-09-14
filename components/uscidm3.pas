@@ -344,26 +344,38 @@ end;
 function ReadUnicodeString(F: TFileStream; Len: Integer = 1; const Charset: String = DEFAULTCHARSET): String;
 var
   Buffer: Array of Byte;
-  CodeUnitCount, i: Integer;
+  CodeUnitCount, i, OutLen: Integer;
   CodePoint, HighSurrogate: Cardinal;
 
   // Appends the UTF-8 encoding of a single Unicode code point to Result
   procedure AppendUTF8(CP: Cardinal);
   begin
     if CP <= $7F then
-      Result := Result + Chr(CP)
+    begin
+      Result[OutLen + 1] := Chr(CP);
+      Inc(OutLen);
+    end
     else if CP <= $7FF then
-      Result := Result + Chr($C0 or (CP shr 6)) +
-                          Chr($80 or (CP and $3F))
+    begin
+      Result[OutLen + 1] := Chr($C0 or (CP shr 6));
+      Result[OutLen + 2] := Chr($80 or (CP and $3F));
+      Inc(OutLen, 2);
+    end
     else if CP <= $FFFF then
-      Result := Result + Chr($E0 or (CP shr 12)) +
-                          Chr($80 or ((CP shr 6) and $3F)) +
-                          Chr($80 or (CP and $3F))
+    begin
+      Result[OutLen + 1] := Chr($E0 or (CP shr 12));
+      Result[OutLen + 2] := Chr($80 or ((CP shr 6) and $3F));
+      Result[OutLen + 3] := Chr($80 or (CP and $3F));
+      Inc(OutLen, 3);
+    end
     else
-      Result := Result + Chr($F0 or (CP shr 18)) +
-                          Chr($80 or ((CP shr 12) and $3F)) +
-                          Chr($80 or ((CP shr 6) and $3F)) +
-                          Chr($80 or (CP and $3F));
+    begin
+      Result[OutLen + 1] := Chr($F0 or (CP shr 18));
+      Result[OutLen + 2] := Chr($80 or ((CP shr 12) and $3F));
+      Result[OutLen + 3] := Chr($80 or ((CP shr 6) and $3F));
+      Result[OutLen + 4] := Chr($80 or (CP and $3F));
+      Inc(OutLen, 4);
+    end;
   end;
 
 begin
@@ -387,6 +399,9 @@ begin
     Exit;
   end;
 
+  SetLength(Result, CodeUnitCount*3);
+  OutLen := 0;
+
   i := 0;
   while i < CodeUnitCount do
   begin
@@ -404,6 +419,8 @@ begin
     AppendUTF8(CodePoint);
     Inc(i);
   end;
+
+  SetLength(Result, OutLen);
 end;
 
 // Read 2 bytes as *little endian* SmallInt from file F
