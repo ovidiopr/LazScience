@@ -31,9 +31,9 @@ implementation
 {$R *.lfm}
 
 const
-  TCColors: array[TThermoCouple] of TColor = (
-    clRed, clBlue, clGreen, clFuchsia, clTeal, clNavy, clMaroon, clOlive, clPurple
-  );
+  TCColors: array[TThermoCouple] of TColor = (clRed, clBlue, clGreen, clFuchsia,
+                                              clTeal, clNavy, clMaroon, clOlive,
+                                              clPurple);
 
 { TForm1 }
 

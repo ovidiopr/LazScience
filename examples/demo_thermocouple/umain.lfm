@@ -7,7 +7,7 @@ object Form1: TForm1
   ClientHeight = 600
   ClientWidth = 800
   Position = poScreenCenter
-  LCLVersion = '4.6.0.0'
+  LCLVersion = '4.8.0.0'
   OnCreate = FormCreate
   object PageControl1: TPageControl
     Left = 0
@@ -20,13 +20,13 @@ object Form1: TForm1
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'Temperature to Voltage (Direct)'
-      ClientHeight = 572
-      ClientWidth = 792
+      ClientHeight = 566
+      ClientWidth = 790
       object ChartTtoV: TChart
         Left = 0
-        Height = 572
+        Height = 566
         Top = 0
-        Width = 792
+        Width = 790
         AxisList = <        
           item
             Grid.Color = clSilver
@@ -54,13 +54,13 @@ object Form1: TForm1
     end
     object TabSheet2: TTabSheet
       Caption = 'Voltage to Temperature (Inverse)'
-      ClientHeight = 572
-      ClientWidth = 792
+      ClientHeight = 566
+      ClientWidth = 790
       object ChartVtoT: TChart
         Left = 0
-        Height = 572
+        Height = 566
         Top = 0
-        Width = 792
+        Width = 790
         AxisList = <        
           item
             Grid.Color = clSilver
