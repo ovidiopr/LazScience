@@ -175,6 +175,9 @@ type
     procedure ReadImageData;
     procedure DoDataChanged;
 
+    procedure LoadFileBuffer;
+    function GetDataChunk(StartOffset, Size: Int64; out OwnsStream: Boolean): TStream;
+
     function GetOutputCharset: String;
     procedure SetOutputCharset(const Value: String);
 
@@ -901,9 +904,67 @@ begin
   FOutputCharset := Value;
 end;
 
-procedure TSciDM3.SetFileName(Value: String);
+procedure TSciDM3.LoadFileBuffer;
 var
   DiskFile: TFileStream;
+begin
+  if assigned(FFile) then
+    Exit; // already resident, nothing to do
+
+  // Load DM3 the file into memory, for faster parsing
+  DiskFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    FFile := TMemoryStream.Create;
+    try
+      TMemoryStream(FFile).CopyFrom(DiskFile, DiskFile.Size);
+    except
+      FreeAndNil(FFile);
+      raise;
+    end;
+  finally
+    DiskFile.Free;
+  end;
+  FFile.Position := 0;
+end;
+
+function TSciDM3.GetDataChunk(StartOffset, Size: Int64; out OwnsStream: Boolean): TStream;
+var
+  DiskFile: TFileStream;
+begin
+  if assigned(FFile) then
+  begin
+    // Still parsing, just seek
+    Result := FFile;
+    Result.Position := StartOffset;
+    OwnsStream := False;
+    Exit;
+  end;
+
+  // Re-open the file to copy this chunk into a small in-memory buffer
+  try
+    DiskFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
+  except
+    on E: Exception do
+      raise Exception.CreateFmt('Cannot re-open "%s" to read data at offset %x: %s',
+                                [ExtractFileName(FFileName), StartOffset, E.Message]);
+  end;
+  try
+    Result := TMemoryStream.Create;
+    try
+      DiskFile.Position := StartOffset;
+      TMemoryStream(Result).CopyFrom(DiskFile, Size);
+      Result.Position := 0;
+    except
+      Result.Free;
+      raise;
+    end;
+  finally
+    DiskFile.Free;
+  end;
+  OwnsStream := True;
+end;
+
+procedure TSciDM3.SetFileName(Value: String);
 begin
   if (Value <> FFileName) then
   begin
@@ -918,27 +979,7 @@ begin
     if assigned(FFile) then
       FreeAndNil(FFile);
 
-    // Open file for reading
-    if FileExists(FFileName) then
-    begin
-      // Load DM3 the file into memory before parsing, for faster reading
-      DiskFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
-      try
-        FFile := TMemoryStream.Create;
-        try
-          TMemoryStream(FFile).CopyFrom(DiskFile, DiskFile.Size);
-        except
-          FreeAndNil(FFile);
-          raise;
-        end;
-      finally
-        DiskFile.Free;
-      end;
-      FFile.Position := 0;
-      FIsOpen := True;
-    end
-    else
-      FIsOpen := False;
+    FIsOpen := FileExists(FFileName);
 
     if FAutoParse and FIsOpen then
       ParseDM3;
@@ -1081,60 +1122,68 @@ var
 begin
   if IsOpen then
   begin
-    FStoredTags.Clear;
-    FTagDict.Clear;
+    // (Re)load the whole file into memory for parsing
+    LoadFileBuffer;
+    try
+      FStoredTags.Clear;
+      FTagDict.Clear;
 
-    // Track currently read group
-    FCurGroupLevel := -1;
-    FillChar(FCurGroupAtLevelX, SizeOf(FCurGroupAtLevelX), 0);
-    FillChar(FCurGroupNameAtLevelX, SizeOf(FCurGroupNameAtLevelX), 0);
+      // Track currently read group
+      FCurGroupLevel := -1;
+      FillChar(FCurGroupAtLevelX, SizeOf(FCurGroupAtLevelX), 0);
+      FillChar(FCurGroupNameAtLevelX, SizeOf(FCurGroupNameAtLevelX), 0);
 
-    // Track current tag
-    FillChar(FCurTagAtLevelX, SizeOf(FCurTagAtLevelX), 0);
-    FCurTagName := '';
+      // Track current tag
+      FillChar(FCurTagAtLevelX, SizeOf(FCurTagAtLevelX), 0);
+      FCurTagName := '';
 
-    if (DebugLevel > 0) then t1 := Now;
+      if (DebugLevel > 0) then t1 := Now;
 
-    // Read header (first 3 4-byte int)
-    // Get version
-    FileVersion := ReadLongInt(FFile);
-    // Get indicated file size
-    FileSize := ReadLongInt(FFile);
-    // Get byte-ordering
-    LittleEndian := (ReadLongInt(FFile) = 1);
+      // Read header (first 3 4-byte int)
+      // Get version
+      FileVersion := ReadLongInt(FFile);
+      // Get indicated file size
+      FileSize := ReadLongInt(FFile);
+      // Get byte-ordering
+      LittleEndian := (ReadLongInt(FFile) = 1);
 
-    // Check file header, raise Exception if not DM3
-    if (FileVersion <> 3) or not LittleEndian then
-      raise Exception.Create(Format('"%s" does not appear to be a DM3 file.', [ExtractFileName(FFileName)]))
-    else if (DebugLevel > 0) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('"%s" appears to be a DM3 file', [FFileName]), smInfo);
+      // Check file header, raise Exception if not DM3
+      if (FileVersion <> 3) or not LittleEndian then
+        raise Exception.Create(Format('"%s" does not appear to be a DM3 file.', [ExtractFileName(FFileName)]))
+      else if (DebugLevel > 0) and assigned(OnPrintMessage) then
+        OnPrintMessage(Self, Format('"%s" appears to be a DM3 file', [FFileName]), smInfo);
 
-    if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    begin
-      OnPrintMessage(Self, 'Header info.:', smInfo);
-      OnPrintMessage(Self, Format('  -File version: %d', [FileVersion]), smInfo);
-      OnPrintMessage(Self, Format('  -Little Endian: %s', [BoolToStr(LittleEndian, True)]), smInfo);
-      OnPrintMessage(Self, Format('  -File size: %d bytes', [FileSize]), smInfo);
+      if (DebugLevel > 5) and assigned(OnPrintMessage) then
+      begin
+        OnPrintMessage(Self, 'Header info.:', smInfo);
+        OnPrintMessage(Self, Format('  -File version: %d', [FileVersion]), smInfo);
+        OnPrintMessage(Self, Format('  -Little Endian: %s', [BoolToStr(LittleEndian, True)]), smInfo);
+        OnPrintMessage(Self, Format('  -File size: %d bytes', [FileSize]), smInfo);
+      end;
+
+      // Set name of root group (contains all data)...
+      FCurGroupNameAtLevelX[0] := 'root';
+      // Read it
+      ReadTagGroup;
+
+      if (DebugLevel > 0) and assigned(OnPrintMessage) then
+        OnPrintMessage(Self, Format('-- %d Tags read --', [FStoredTags.Count]), smInfo);
+
+      // Finally, read image data
+      ReadImageData;
+
+      if (DebugLevel > 0) and assigned(OnPrintMessage) then
+      begin
+        t2 := Now;
+        OnPrintMessage(Self, Format('| parse DM3 file: %.3g s', [t2 - t1]), smInfo);
+      end;
+
+      FIsParsed := True;
+    finally
+      // Parsing is done, release the memory
+      FreeAndNil(FFile);
     end;
 
-    // Set name of root group (contains all data)...
-    FCurGroupNameAtLevelX[0] := 'root';
-    // Read it
-    ReadTagGroup;
-
-    if (DebugLevel > 0) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('-- %d Tags read --', [FStoredTags.Count]), smInfo);
-
-    // Finally, read image data
-    ReadImageData;
-
-    if (DebugLevel > 0) and assigned(OnPrintMessage) then
-    begin
-      t2 := Now;
-      OnPrintMessage(Self, Format('| parse DM3 file: %.3g s', [t2 - t1]), smInfo);
-    end;
-
-    FIsParsed := True;
     DoDataChanged;
   end;
 end;
@@ -1209,6 +1258,8 @@ var
   DataOffset, DataSize, PixelDepth: Integer;
   TagRoot: String;
   TmpImage: TImageData;
+  Strm: TStream;
+  OwnsStrm: Boolean;
 begin
   if IsOpen then
   begin
@@ -1243,188 +1294,196 @@ begin
       OnPrintMessage(Self, Format('Image data type: %d read as %s.', [DataType, DataTypes[Integer(DataType)]]), smInfo);
     end;
 
-    FFile.Position := DataOffset;
+    // Grabs the whole DataSize-byte image block in one go
+    Strm := GetDataChunk(DataOffset, DataSize, OwnsStrm);
+    try
+      // Check if image DataType is implemented, then read it
+      case DataType of
+        // 16-bit LE signed integer (SmallInt, LE)
+        SIGNED_INT16_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLESmallInt(Strm);
+        end;
 
-    // Check if image DataType is implemented, then read it
-    case DataType of
-      // 16-bit LE signed integer (SmallInt, LE)
-      SIGNED_INT16_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLESmallInt(FFile);
-      end;
+        // 32-bit LE floating point (Single, LE)
+        REAL4_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLEFloat(Strm);
+        end;
 
-      // 32-bit LE floating point (Single, LE)
-      REAL4_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLEFloat(FFile);
-      end;
-
-      // 64-bit LE complex floating point (Two Singles, LE)
-      COMPLEX8_DATA: begin
-        SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
-
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-            begin
-              FDataReal[i, j, k] := ReadLEFloat(FFile);
-              FDataImag[i, j, k] := ReadLEFloat(FFile);
-            end;
-      end;
-
-      // 32-bit LE packed complex (FFT)
-      PACKED_DATA: begin
-        try
+        // 64-bit LE complex floating point (Two Singles, LE)
+        COMPLEX8_DATA: begin
           SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
-          SetLength(TmpImage, ImWidth, ImHeight, ImDepth);
 
           for i := 0 to ImWidth - 1 do
             for j := 0 to ImHeight - 1 do
               for k := 0 to ImDepth - 1 do
               begin
-                TmpImage[i, j, k] := ReadLEFloat(FFile);
-                FDataReal[i, j, k] := 1.0;
+                FDataReal[i, j, k] := ReadLEFloat(Strm);
+                FDataImag[i, j, k] := ReadLEFloat(Strm);
               end;
-
-          for i := 0 to ImWidth - 1 do
-            for j := (1 + ImHeight div 2) to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2), k];
-                FDataImag[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2) + 1, k];
-              end;
-
-          for i := 0 to ImWidth - 1 do
-            for j := 1 to (ImHeight div 2) - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[i, j, k] := FDataReal[ImWidth - 1 - i, ImHeight - j, k];
-                FDataImag[i, j, k] := -FDataImag[ImWidth - 1 - i, ImHeight - j, k]
-              end;
-
-          for i := (1 + ImWidth div 2) to ImWidth - 1 do
-            for k := 0 to ImDepth - 1 do
-            begin
-              FDataReal[i, 0, k] := TmpImage[i - ImWidth div 2, 0, k];
-              FDataImag[i, 0, k] := TmpImage[i - ImWidth div 2, 1, k];
-            end;
-
-          for i := 1 to (ImWidth div 2) - 1 do
-            for k := 0 to ImDepth - 1 do
-            begin
-              FDataReal[i, 0, k] := FDataReal[ImWidth - i, 0, k];
-              FDataImag[i, 0, k] := -FDataImag[ImWidth - i, 0, k];
-            end;
-
-          for i := (1 + ImWidth div 2) to ImWidth - 1 do
-            for k := 0 to ImDepth - 1 do
-            begin
-              FDataReal[i, ImHeight div 2, k] := TmpImage[i, 0, k];
-              FDataImag[i, ImHeight div 2, k] := TmpImage[i, 1, k];
-            end;
-
-          for i := 1 to (ImWidth div 2) - 1 do
-            for k := 0 to ImDepth - 1 do
-            begin
-              FDataReal[i, ImHeight div 2, k] := FDataReal[ImWidth - i, ImHeight div 2, k];
-              FDataImag[i, ImHeight div 2, k] := -FDataImag[ImWidth - i, ImHeight div 2, k];
-            end;
-
-          for k := 0 to ImDepth - 1 do
-          begin
-            FDataReal[0, 0, k] := TmpImage[0, 1, k];
-            FDataImag[0, 0, k] := 0.0;
-
-            FDataReal[ImWidth div 2, 0, k] := TmpImage[0, 0, k];
-            FDataImag[ImWidth div 2, 0, k] := 0.0;
-
-            FDataReal[0, ImHeight div 2, k] := TmpImage[ImWidth div 2, 1, k];
-            FDataImag[0, ImHeight div 2, k] := 0.0;
-
-            FDataReal[ImWidth div 2, ImHeight div 2, k] := TmpImage[ImWidth div 2, 0, k];
-            FDataImag[ImWidth div 2, ImHeight div 2, k] := 0.0;
-          end;
-        finally
-          SetLength(TmpImage, 0, 0, 0);
         end;
-      end;
 
-      // 8-bit unsigned integer (Byte)
-      UNSIGNED_INT8_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadByte(FFile);
-      end;
+        // 32-bit LE packed complex (FFT)
+        PACKED_DATA: begin
+          try
+            SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
+            SetLength(TmpImage, ImWidth, ImHeight, ImDepth);
 
-      // 32-bit LE signed integer (LongInt, LE)
-      SIGNED_INT32_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLELongInt(FFile);
-      end;
+            for i := 0 to ImWidth - 1 do
+              for j := 0 to ImHeight - 1 do
+                for k := 0 to ImDepth - 1 do
+                begin
+                  TmpImage[i, j, k] := ReadLEFloat(Strm);
+                  FDataReal[i, j, k] := 1.0;
+                end;
 
-      // 8-bit signed integer (ShorInt)
-      SIGNED_INT8_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadShortInt(FFile);
-      end;
+            for i := 0 to ImWidth - 1 do
+              for j := (1 + ImHeight div 2) to ImHeight - 1 do
+                for k := 0 to ImDepth - 1 do
+                begin
+                  FDataReal[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2), k];
+                  FDataImag[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2) + 1, k];
+                end;
 
-      // 16-bit LE unsigned integer (Word, LE)
-      UNSIGNED_INT16_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLEWord(FFile);
-      end;
+            for i := 0 to ImWidth - 1 do
+              for j := 1 to (ImHeight div 2) - 1 do
+                for k := 0 to ImDepth - 1 do
+                begin
+                  FDataReal[i, j, k] := FDataReal[ImWidth - 1 - i, ImHeight - j, k];
+                  FDataImag[i, j, k] := -FDataImag[ImWidth - 1 - i, ImHeight - j, k]
+                end;
 
-      // 32-bit LE unsigned integer (Cardinal, LE)
-      UNSIGNED_INT32_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLECardinal(FFile);
-      end;
+            for i := (1 + ImWidth div 2) to ImWidth - 1 do
+              for k := 0 to ImDepth - 1 do
+              begin
+                FDataReal[i, 0, k] := TmpImage[i - ImWidth div 2, 0, k];
+                FDataImag[i, 0, k] := TmpImage[i - ImWidth div 2, 1, k];
+              end;
 
-      // 64-bit LE floating point (Double, LE)
-      REAL8_DATA: begin
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
-            for k := 0 to ImDepth - 1 do
-              FDataReal[i, j, k] := ReadLEDouble(FFile);
-      end;
+            for i := 1 to (ImWidth div 2) - 1 do
+              for k := 0 to ImDepth - 1 do
+              begin
+                FDataReal[i, 0, k] := FDataReal[ImWidth - i, 0, k];
+                FDataImag[i, 0, k] := -FDataImag[ImWidth - i, 0, k];
+              end;
 
-      // 128-bit LE complex floating point (Two Doubles, LE)
-      COMPLEX16_DATA: begin
-        SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
+            for i := (1 + ImWidth div 2) to ImWidth - 1 do
+              for k := 0 to ImDepth - 1 do
+              begin
+                FDataReal[i, ImHeight div 2, k] := TmpImage[i, 0, k];
+                FDataImag[i, ImHeight div 2, k] := TmpImage[i, 1, k];
+              end;
 
-        for i := 0 to ImWidth - 1 do
-          for j := 0 to ImHeight - 1 do
+            for i := 1 to (ImWidth div 2) - 1 do
+              for k := 0 to ImDepth - 1 do
+              begin
+                FDataReal[i, ImHeight div 2, k] := FDataReal[ImWidth - i, ImHeight div 2, k];
+                FDataImag[i, ImHeight div 2, k] := -FDataImag[ImWidth - i, ImHeight div 2, k];
+              end;
+
             for k := 0 to ImDepth - 1 do
             begin
-              FDataReal[i, j, k] := ReadLEDouble(FFile);
-              FDataImag[i, j, k] := ReadLEDouble(FFile);
+              FDataReal[0, 0, k] := TmpImage[0, 1, k];
+              FDataImag[0, 0, k] := 0.0;
+
+              FDataReal[ImWidth div 2, 0, k] := TmpImage[0, 0, k];
+              FDataImag[ImWidth div 2, 0, k] := 0.0;
+
+              FDataReal[0, ImHeight div 2, k] := TmpImage[ImWidth div 2, 1, k];
+              FDataImag[0, ImHeight div 2, k] := 0.0;
+
+              FDataReal[ImWidth div 2, ImHeight div 2, k] := TmpImage[ImWidth div 2, 0, k];
+              FDataImag[ImWidth div 2, ImHeight div 2, k] := 0.0;
             end;
+          finally
+            SetLength(TmpImage, 0, 0, 0);
+          end;
+        end;
+
+        // 8-bit unsigned integer (Byte)
+        UNSIGNED_INT8_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadByte(Strm);
+        end;
+
+        // 32-bit LE signed integer (LongInt, LE)
+        SIGNED_INT32_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLELongInt(Strm);
+        end;
+
+        // 8-bit signed integer (ShorInt)
+        SIGNED_INT8_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadShortInt(Strm);
+        end;
+
+        // 16-bit LE unsigned integer (Word, LE)
+        UNSIGNED_INT16_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLEWord(Strm);
+        end;
+
+        // 32-bit LE unsigned integer (Cardinal, LE)
+        UNSIGNED_INT32_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLECardinal(Strm);
+        end;
+
+        // 64-bit LE floating point (Double, LE)
+        REAL8_DATA: begin
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+                FDataReal[i, j, k] := ReadLEDouble(Strm);
+        end;
+
+        // 128-bit LE complex floating point (Two Doubles, LE)
+        COMPLEX16_DATA: begin
+          SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
+
+          for i := 0 to ImWidth - 1 do
+            for j := 0 to ImHeight - 1 do
+              for k := 0 to ImDepth - 1 do
+              begin
+                FDataReal[i, j, k] := ReadLEDouble(Strm);
+                FDataImag[i, j, k] := ReadLEDouble(Strm);
+              end;
+        end;
+        else
+          raise Exception.CreateFmt('Cannot extract image data from "%s": unimplemented DataType (%s).',
+                                    [ExtractFileName(FFileName), DataTypes[Integer(DataType)]]);
       end;
-      else
-        raise Exception.CreateFmt('Cannot extract image data from "%s": unimplemented DataType (%s).',
-                                  [ExtractFileName(FFileName), DataTypes[Integer(DataType)]]);
+    finally
+      if OwnsStrm then
+        Strm.Free;
     end;
   end;
 end;
+
 
 function TSciDM3.GetThumbnail: TBitmap;
 var
   TagRoot: String;
   TnSize, TnOffset, TnWidth, TnHeight: Integer;
   RawData: TBytes;
+  Strm: TStream;
+  OwnsStrm: Boolean;
 begin
   Result := Nil;
   if IsOpen and IsParsed then
@@ -1445,9 +1504,15 @@ begin
       raise Exception.Create('Cannot extract thumbnail from ' + ExtractFileName(FFileName))
     else
     begin
-      FFile.Position := TnOffset;
-      SetLength(RawData, TnSize);
-      FFile.ReadBuffer(RawData[0], TnSize);
+      // Grabs exactly the thumbnail's bytes
+      Strm := GetDataChunk(TnOffset, TnSize, OwnsStrm);
+      try
+        SetLength(RawData, TnSize);
+        Strm.ReadBuffer(RawData[0], TnSize);
+      finally
+        if OwnsStrm then
+          Strm.Free;
+      end;
 
       Result := TBitmap.Create;
       try
