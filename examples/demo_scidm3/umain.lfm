@@ -1,0 +1,71 @@
+object FormMain: TFormMain
+  Left = 350
+  Height = 600
+  Top = 150
+  Width = 800
+  Caption = 'SciDM3 Demo'
+  ClientHeight = 600
+  ClientWidth = 800
+  Position = poScreenCenter
+  LCLVersion = '4.6.0.0'
+  object PanelTop: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 800
+    Align = alTop
+    ClientHeight = 50
+    ClientWidth = 800
+    TabOrder = 0
+    object ButtonOpen: TButton
+      Left = 16
+      Height = 30
+      Top = 10
+      Width = 150
+      Caption = 'Open .dm3 File...'
+      TabOrder = 0
+      OnClick = ButtonOpenClick
+    end
+  end
+  object TreeView1: TTreeView
+    Left = 0
+    Height = 550
+    Top = 50
+    Width = 250
+    Align = alLeft
+    TabOrder = 1
+  end
+  object Splitter1: TSplitter
+    Left = 250
+    Height = 550
+    Top = 50
+    Width = 5
+  end
+  object Image1: TImage
+    Left = 255
+    Height = 550
+    Top = 50
+    Width = 545
+    Align = alClient
+    Center = True
+    Proportional = True
+    Stretch = True
+  end
+  object OpenDialog1: TOpenDialog
+    Filter = 'DigitalMicrograph Files|*.dm3|All Files|*.*'
+    Left = 200
+    Top = 10
+  end
+  object SciDM3: TSciDM3
+    OutputCharset = 'UTF-8'
+    Left = 280
+    Top = 10
+  end
+  object SciDM3Connector: TSciDM3Connector
+    DM3 = SciDM3
+    TreeView = TreeView1
+    ImageControl = Image1
+    Left = 360
+    Top = 10
+  end
+end
