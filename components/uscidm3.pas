@@ -921,7 +921,7 @@ begin
     // Open file for reading
     if FileExists(FFileName) then
     begin
-      // Load the file into mamory, for faster loading
+      // Load DM3 the file into memory before parsing, for faster reading
       DiskFile := TFileStream.Create(FFileName, fmOpenRead or fmShareDenyWrite);
       try
         FFile := TMemoryStream.Create;
