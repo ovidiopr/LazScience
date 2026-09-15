@@ -632,12 +632,11 @@ end;
 function TSciDM3.ReadTagType: Integer;
 var
   Delim: String;
-  NumInTag: LongInt;
 begin
   Delim := ReadString(FFile, 4);
   if Delim <> '%%%%' then
     raise Exception.Create(Format('%x: Tag Type delimiter not %%%%', [FFile.Position]));
-  NumInTag := ReadLongInt(FFile);
+  ReadLongInt(FFile); // NumInTag: advance stream past the type-info length field; value unused
   ReadAnyData;
   Result := 1;
 end;
@@ -767,14 +766,15 @@ end;
 
 function TSciDM3.ReadArrayData(ArrayTypes: TIntegerArray): Integer;
 var
-  ArraySize, ItemSize, EncodedType, ETSize, BufSize: Integer;
+  ArraySize, ItemSize, EncodedType, ETSize: Integer;
+  BufSize: Int64;
   i: Integer;
 begin
   // Reads array data
   ArraySize := ReadLongInt(FFile);
 
   if (DebugLevel > 3) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rArD, %x: Reading array of size = %d', [FFile.Position, ArraySize]), smInfo);
+    OnPrintMessage(Self, Format('%x: Reading array of size = %d', [FFile.Position, ArraySize]), smInfo);
 
   ItemSize := 0;
   EncodedType := 0;
@@ -785,13 +785,14 @@ begin
     ETSize := EncodedTypeSize(EncodedType);
     Inc(ItemSize, ETSize);
     if (DebugLevel > 5) and assigned(OnPrintMessage) then
-      OnPrintMessage(Self, Format('rArD: Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), smInfo);
+      OnPrintMessage(Self, Format('Tag Type = %d\tTag Size = %d', [EncodedType, ETSize]), smInfo);
   end;
 
   if (DebugLevel > 5) and assigned(OnPrintMessage) then
-    OnPrintMessage(Self, Format('rArD: Array Item Size = %d', [ItemSize]), smInfo);
+    OnPrintMessage(Self, Format('Array Item Size = %d', [ItemSize]), smInfo);
 
-  BufSize := ArraySize*ItemSize;
+  // Widen to Int64 before multiplying to prevent 32-bit signed overflow
+  BufSize := Int64(ArraySize)*ItemSize;
 
   // Guard against a corrupt/malicious file
   if (ArraySize < 0) or (BufSize < 0) or (BufSize > FFile.Size - FFile.Position) then
@@ -879,8 +880,17 @@ function TSciDM3.StoreTag(TagName: String; TagValue: Variant): String;
 begin
   // Convert tag value to String if it is not already
   case VarType(TagValue) of
-    varInteger: Result := IntToStr(TagValue);
-    varDouble: Result := FloatToStr(TagValue);
+    varSmallint,
+    varInteger,
+    varShortInt,
+    varByte,
+    varWord,
+    varLongWord,
+    varInt64,
+    varQWord: Result := IntToStr(TagValue);
+    varSingle,
+    varDouble,
+    varCurrency: Result := FloatToStr(Double(TagValue));
     varBoolean: Result := BoolToStr(TagValue, True);
     else
       Result := VarToStr(TagValue);
@@ -1067,21 +1077,26 @@ begin
     hl := HighLimit;
 
     Result := TBitmap.Create;
-    Result.Width := w;
-    Result.Height := h;
+    try
+      Result.Width := w;
+      Result.Height := h;
 
-    TempIntfImage := Result.CreateIntfImage;
-
-    for i := 0 to w - 1 do
-    begin
-      for j := 0 to h - 1 do
-      begin
-        c := NormalizePixelValue(PixelValue(i, j, Index), ll, hl);
-        TempIntfImage.Colors[i, j] := TColorToFPColor(RGBToColor(c, c, c));
+      TempIntfImage := Result.CreateIntfImage;
+      try
+        for i := 0 to w - 1 do
+          for j := 0 to h - 1 do
+          begin
+            c := NormalizePixelValue(PixelValue(i, j, Index), ll, hl);
+            TempIntfImage.Colors[i, j] := TColorToFPColor(RGBToColor(c, c, c));
+          end;
+        Result.LoadFromIntfImage(TempIntfImage);
+      finally
+        TempIntfImage.Free;
       end;
+    except
+      FreeAndNil(Result);
+      raise;
     end;
-
-    Result.LoadFromIntfImage(TempIntfImage);
   end;
 end;
 
@@ -1119,6 +1134,7 @@ var
   FileVersion, FileSize: Integer;
   LittleEndian: Boolean;
   t1, t2: TDateTime;
+  k: Integer;
 begin
   if IsOpen then
   begin
@@ -1131,7 +1147,8 @@ begin
       // Track currently read group
       FCurGroupLevel := -1;
       FillChar(FCurGroupAtLevelX, SizeOf(FCurGroupAtLevelX), 0);
-      FillChar(FCurGroupNameAtLevelX, SizeOf(FCurGroupNameAtLevelX), 0);
+      for k := 0 to MAXDEPTH - 1 do
+        FCurGroupNameAtLevelX[k] := '';
 
       // Track current tag
       FillChar(FCurTagAtLevelX, SizeOf(FCurTagAtLevelX), 0);
@@ -1227,6 +1244,7 @@ var
   BarTag,
   MicTag: String;
 begin
+  Result := nil;
   if IsOpen and IsParsed then
   begin
     // Define useful information
@@ -1236,7 +1254,6 @@ begin
 
     // Get experiment information
     Result := TStringList.Create;
-    Result.Clear;
 
     AddItem('descrip', Format('%s.Description', [TagRoot]));
     AddItem('acq_date', Format('%s.Acquisition Date', [BarTag]));
@@ -1260,24 +1277,39 @@ var
   TmpImage: TImageData;
   Strm: TStream;
   OwnsStrm: Boolean;
+
+  // Read a required integer tag
+  function RequiredInt(const TagName: String): Integer;
+  var
+    Raw: String;
+  begin
+    if Tags.IndexOfName(TagName) < 0 then
+      raise Exception.CreateFmt('Required tag "%s" not found in "%s".',
+                                [TagName, ExtractFileName(FFileName)]);
+    Raw := Tags.Values[TagName];
+    if not TryStrToInt(Raw, Result) then
+      raise Exception.CreateFmt('Tag "%s" has non-integer value "%s" in "%s".',
+                                [TagName, Raw, ExtractFileName(FFileName)]);
+  end;
+
 begin
   if IsOpen then
   begin
     TagRoot := Format(IMGLIST + '%d.ImageData', [ChosenImage]);
 
-    DataOffset := StrToInt(Tags.Values[TagRoot + '.Data.Offset']);
-    DataSize := StrToInt(Tags.Values[TagRoot + '.Data.Size']);
-    FDataType := TDataType(StrToInt(Tags.Values[TagRoot + '.DataType']));
-    PixelDepth := StrToInt(Tags.Values[TagRoot + '.PixelDepth']);
-    ImWidth := StrToInt(Tags.Values[TagRoot + '.Dimensions.0']);
+    DataOffset := RequiredInt(TagRoot + '.Data.Offset');
+    DataSize := RequiredInt(TagRoot + '.Data.Size');
+    FDataType := TDataType(RequiredInt(TagRoot + '.DataType'));
+    PixelDepth := RequiredInt(TagRoot + '.PixelDepth');
+    ImWidth := RequiredInt(TagRoot + '.Dimensions.0');
 
     if Tags.IndexOfName(TagRoot + '.Dimensions.1') > -1 then
-      ImHeight := StrToInt(Tags.Values[TagRoot + '.Dimensions.1'])
+      ImHeight := RequiredInt(TagRoot + '.Dimensions.1')
     else
       ImHeight := 1;
 
     if Tags.IndexOfName(TagRoot + '.Dimensions.2') > -1 then
-      ImDepth := StrToInt(Tags.Values[TagRoot + '.Dimensions.2'])
+      ImDepth := RequiredInt(TagRoot + '.Dimensions.2')
     else
       ImDepth := 1;
 

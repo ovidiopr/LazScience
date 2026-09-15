@@ -3,12 +3,17 @@
 //  uSciDM3Connector.pas                                                  //
 //                                                                        //
 //  GUI-only companion to TSciDM3; this unit provides the visual          //
-//  presentation (a live tag TTreeView and a rendered TImage) as a        //
-//  separate non-visual component, TSciDM3Connector, that you drop        //
+//  presentation (a live tag TTreeView and a rendered image control) as   //
+//  a separate non-visual component, TSciDM3Connector, that you drop      //
 //  alongside a TSciDM3 and link to it plus the UI controls.              //
 //                                                                        //
 //  Neither link is required: use TreeView only, ImageControl only, or    //
 //  both.                                                                 //
+//                                                                        //
+//  ImageControl accepts any TGraphicControl descendant (TImage,          //
+//  TPaintBox, …). TImage is handled by assigning to Picture.Bitmap;      //
+//  all other TGraphicControl descendants receive the bitmap via           //
+//  OnPaint + Canvas.Draw.                                                 //
 //                                                                        //
 //  2026-09-14 First version (Ovidio)                                     //
 //                                                                        //
@@ -33,18 +38,23 @@ type
   private
     FDM3: TSciDM3;
     FTreeView: TTreeView;
-    FImageControl: TImage;
+    FImageControl: TGraphicControl;
+    FCachedBitmap: TBitmap;
     FAutoRefresh: Boolean;
     FColorScheme: TDM3ColorScheme;
     FSliceIndex: Integer;
 
     procedure SetDM3(Value: TSciDM3);
     procedure SetTreeView(Value: TTreeView);
-    procedure SetImageControl(Value: TImage);
+    procedure SetImageControl(Value: TGraphicControl);
     procedure SetColorScheme(Value: TDM3ColorScheme);
     procedure SetSliceIndex(Value: Integer);
 
     procedure DM3DataChanged(Sender: TObject);
+
+    procedure RenderToControl;
+    procedure SetOnPaint(AControl: TGraphicControl; AHandler: TNotifyEvent);
+    procedure OnImageControlPaint(Sender: TObject);
 
     procedure RefreshTree;
     procedure RefreshImage;
@@ -62,7 +72,7 @@ type
   published
     property DM3: TSciDM3 read FDM3 write SetDM3;
     property TreeView: TTreeView read FTreeView write SetTreeView;
-    property ImageControl: TImage read FImageControl write SetImageControl;
+    property ImageControl: TGraphicControl read FImageControl write SetImageControl;
     property AutoRefresh: Boolean read FAutoRefresh write FAutoRefresh default True;
     property ColorScheme: TDM3ColorScheme read FColorScheme write SetColorScheme default csGrayscale;
     property SliceIndex: Integer read FSliceIndex write SetSliceIndex default 0;
@@ -85,6 +95,7 @@ begin
   FAutoRefresh := True;
   FColorScheme := csGrayscale;
   FSliceIndex := 0;
+  FCachedBitmap := nil;
 end;
 
 destructor TSciDM3Connector.Destroy;
@@ -98,7 +109,11 @@ begin
   if assigned(FTreeView) then
     FTreeView.RemoveFreeNotification(Self);
   if assigned(FImageControl) then
+  begin
+    SetOnPaint(FImageControl, nil);
     FImageControl.RemoveFreeNotification(Self);
+  end;
+  FCachedBitmap.Free;
   inherited Destroy;
 end;
 
@@ -108,14 +123,15 @@ begin
   if Operation = opRemove then
   begin
     if AComponent = FDM3 then
-    begin
-      FDM3.UnregisterDataChangeListener(@DM3DataChanged);
-      FDM3 := Nil;
-    end
+      FDM3 := nil
     else if AComponent = FTreeView then
-      FTreeView := Nil
+      FTreeView := nil
     else if AComponent = FImageControl then
-      FImageControl := Nil;
+    begin
+      // The control is gone; release the cached bitmap and nil the reference
+      FreeAndNil(FCachedBitmap);
+      FImageControl := nil;
+    end;
   end;
 end;
 
@@ -157,17 +173,28 @@ begin
     RefreshTree;
 end;
 
-procedure TSciDM3Connector.SetImageControl(Value: TImage);
+procedure TSciDM3Connector.SetImageControl(Value: TGraphicControl);
 begin
   if FImageControl = Value then Exit;
 
+  // Unhook the old control
   if assigned(FImageControl) then
+  begin
+    SetOnPaint(FImageControl, nil);
     FImageControl.RemoveFreeNotification(Self);
+  end;
+
+  // Discard any bitmap that was sized for the old control
+  FreeAndNil(FCachedBitmap);
 
   FImageControl := Value;
 
   if assigned(FImageControl) then
+  begin
     FImageControl.FreeNotification(Self);
+    // Hook OnPaint so the cached bitmap is redrawn on every paint
+    SetOnPaint(FImageControl, @OnImageControlPaint);
+  end;
 
   if FAutoRefresh then
     RefreshImage;
@@ -193,6 +220,30 @@ procedure TSciDM3Connector.DM3DataChanged(Sender: TObject);
 begin
   if FAutoRefresh then
     Refresh;
+end;
+
+procedure TSciDM3Connector.RenderToControl;
+begin
+  if not assigned(FCachedBitmap) or not assigned(FImageControl) then
+    Exit;
+
+  if FImageControl is TImage then
+    TImage(FImageControl).Picture.Bitmap.Assign(FCachedBitmap)
+  else
+    FImageControl.Canvas.Draw(0, 0, FCachedBitmap);
+end;
+
+procedure TSciDM3Connector.SetOnPaint(AControl: TGraphicControl; AHandler: TNotifyEvent);
+begin
+  if AControl is TImage then
+    TImage(AControl).OnPaint := AHandler
+  else if AControl is TPaintBox then
+    TPaintBox(AControl).OnPaint := AHandler;
+end;
+
+procedure TSciDM3Connector.OnImageControlPaint(Sender: TObject);
+begin
+  RenderToControl;
 end;
 
 procedure TSciDM3Connector.Refresh;
@@ -228,7 +279,7 @@ begin
         Key := FDM3.Tags.Names[i];
         Value := FDM3.Tags.ValueFromIndex[i];
 
-        ParentNode := Nil;
+        ParentNode := nil;
         PathSoFar := '';
         Remainder := Key;
 
@@ -278,14 +329,24 @@ var
   i, j, w, h: Integer;
   c: Byte;
   ll, hl: Double;
-  Bmp: TBitmap;
   TempIntfImage: TLazIntfImage;
+
+  procedure ClearControl;
+  begin
+    if FImageControl is TImage then
+      TImage(FImageControl).Picture.Graphic := nil
+    else
+      FImageControl.Invalidate;
+  end;
+
 begin
   if not assigned(FImageControl) then Exit;
 
   if not (assigned(FDM3) and FDM3.IsOpen and FDM3.IsParsed) then
   begin
-    FImageControl.Picture.Graphic := Nil;
+    // No data, discard the cache and clear the control
+    FreeAndNil(FCachedBitmap);
+    ClearControl;
     Exit;
   end;
 
@@ -296,37 +357,39 @@ begin
 
   if (FSliceIndex < 0) or (FSliceIndex >= FDM3.ImageDepth) then
   begin
-    FImageControl.Picture.Graphic := Nil;
+    FreeAndNil(FCachedBitmap);
+    ClearControl;
     Exit;
   end;
 
-  Bmp := TBitmap.Create;
-  try
-    Bmp.Width := w;
-    Bmp.Height := h;
-
-    TempIntfImage := Bmp.CreateIntfImage;
-    try
-      for i := 0 to w - 1 do
-        for j := 0 to h - 1 do
-        begin
-          c := NormalizePixelValue(FDM3.PixelValue(i, j, FSliceIndex), ll, hl);
-          case FColorScheme of
-            csInverted: c := 255 - c;
-            // csGrayscale: use c as-is
-          end;
-          TempIntfImage.Colors[i, j] := TColorToFPColor(RGBToColor(c, c, c));
-        end;
-
-      Bmp.LoadFromIntfImage(TempIntfImage);
-    finally
-      TempIntfImage.Free;
-    end;
-
-    FImageControl.Picture.Bitmap.Assign(Bmp);
-  finally
-    Bmp.Free;
+  // (Re)allocate the cached bitmap only when the dimensions actually change
+  if not assigned(FCachedBitmap) or (FCachedBitmap.Width <> w) or (FCachedBitmap.Height <> h) then
+  begin
+    FreeAndNil(FCachedBitmap);
+    FCachedBitmap := TBitmap.Create;
+    FCachedBitmap.Width := w;
+    FCachedBitmap.Height := h;
   end;
+
+  // Run the pixel loop into the cached bitmap via a TLazIntfImage round-trip
+  TempIntfImage := FCachedBitmap.CreateIntfImage;
+  try
+    for i := 0 to w - 1 do
+      for j := 0 to h - 1 do
+      begin
+        c := NormalizePixelValue(FDM3.PixelValue(i, j, FSliceIndex), ll, hl);
+        case FColorScheme of
+          csInverted: c := 255 - c;
+          // csGrayscale: use c as-is
+        end;
+        TempIntfImage.Colors[i, j] := TColorToFPColor(RGBToColor(c, c, c));
+      end;
+    FCachedBitmap.LoadFromIntfImage(TempIntfImage);
+  finally
+    TempIntfImage.Free;
+  end;
+
+  RenderToControl;
 end;
 
 end.
