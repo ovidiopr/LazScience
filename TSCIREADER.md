@@ -103,10 +103,6 @@ A * pi / 180
 sqrt(B^2 + C^2)
 ```
 
-### Numeric literals in formulas
-
-The formula parser always treats `.` as the decimal point for numeric literals in the expression text itself, regardless of `Options.Decimal`. The `Options.Decimal` and `Options.Thousand` settings are used only when reading cell values from the file.
-
 ---
 
 ## `TTXTOptions` reference
