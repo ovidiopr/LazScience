@@ -47,6 +47,11 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciDM3Connector"/>
       </Item>
+      <Item>
+        <Filename Value="uscirestorer.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciRestorer"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
