@@ -1,0 +1,32 @@
+object Form1: TForm1
+  Left = 622
+  Height = 240
+  Top = 241
+  Width = 320
+  Caption = 'Form1'
+  ClientHeight = 240
+  ClientWidth = 320
+  LCLVersion = '4.8.0.0'
+  object Panel1: TPanel
+    Left = 0
+    Height = 240
+    Top = 0
+    Width = 170
+    Align = alLeft
+    Caption = 'Panel1'
+    TabOrder = 0
+  end
+  object Splitter1: TSplitter
+    Left = 170
+    Height = 240
+    Top = 0
+    Width = 5
+  end
+  object SciRestorer1: TSciRestorer
+    IniFileName = 'demo_restorer.ini'
+    UserSubDir = '.demo_restorer'
+    IniLocation = ilUserDir
+    Left = 32
+    Top = 16
+  end
+end
