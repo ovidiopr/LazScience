@@ -46,10 +46,8 @@ type
     procedure EnsureFormVisible(F: TForm);
 
     { Panel save/restore, recursive to handle nested panels }
-    procedure SavePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile;
-      const Section, FormKey: String);
-    procedure RestorePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile;
-      const Section, FormKey: String; SavedDPI, CurDPI: Integer);
+    procedure SavePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String);
+    procedure RestorePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String; SavedDPI, CurDPI: Integer);
 
     { Auto-hook for the owner form }
     procedure HookOwner;
@@ -62,10 +60,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor  Destroy; override;
 
-    procedure SaveForm(TheForm: TForm; const Key: String = '';
-      What: STWhatSave = [svDefault]);
-    procedure RestoreForm(TheForm: TForm; const Key: String = '';
-      What: STWhatSave = [svDefault]);
+    procedure SaveForm(TheForm: TForm; const Key: String = ''; What: STWhatSave = [svDefault]);
+    procedure RestoreForm(TheForm: TForm; const Key: String = ''; What: STWhatSave = [svDefault]);
+
+    property FullIniFileName: String read GetEffectiveIniFileName;
   published
     property IniFileName: String read FIniFileName write FIniFileName;
     property UserSubDir: String read FUserSubDir write FUserSubDir;
