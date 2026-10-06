@@ -9,7 +9,8 @@ interface
 
 uses
   uSciEdit, uSciPID, uSciReader, uSciReaderDlg, uSciThermoCouple, uSciDM3, 
-  uSciDM3Connector, uSciRestorer, LazarusPackageIntf;
+  uSciDM3Connector, uSciRestorer, uSciPeriodicTable, uSciPeriodicTableReg, 
+  uSciPeriodicTableDlg, LazarusPackageIntf;
 
 implementation
 
@@ -23,6 +24,7 @@ begin
   RegisterUnit('uSciDM3', @uSciDM3.Register);
   RegisterUnit('uSciDM3Connector', @uSciDM3Connector.Register);
   RegisterUnit('uSciRestorer', @uSciRestorer.Register);
+  RegisterUnit('uSciPeriodicTableReg', @uSciPeriodicTableReg.Register);
 end;
 
 initialization

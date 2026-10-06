@@ -52,6 +52,27 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciRestorer"/>
       </Item>
+      <Item>
+        <Filename Value="usciperiodictable.pas"/>
+        <UnitName Value="uSciPeriodicTable"/>
+      </Item>
+      <Item>
+        <Filename Value="usciperiodictabledlg.pas"/>
+        <UnitName Value="uSciPeriodicTableDlg"/>
+      </Item>
+      <Item>
+        <Filename Value="usciperiodictablereg.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciPeriodicTableReg"/>
+      </Item>
+      <Item>
+        <Filename Value="sciperiodictable_elements.res"/>
+        <Type Value="Binary"/>
+      </Item>
+      <Item>
+        <Filename Value="sciperiodictable_elements.rc"/>
+        <Type Value="Text"/>
+      </Item>
     </Files>
     <RequiredPkgs>
       <Item>

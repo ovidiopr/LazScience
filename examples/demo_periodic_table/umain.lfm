@@ -1,0 +1,45 @@
+object Form1: TForm1
+  Left = 317
+  Height = 318
+  Top = 215
+  Width = 424
+  Caption = 'Form1'
+  ClientHeight = 318
+  ClientWidth = 424
+  LCLVersion = '4.6.0.0'
+  object btnSelect: TButton
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    Left = 4
+    Height = 25
+    Top = 4
+    Width = 103
+    AutoSize = True
+    BorderSpacing.Around = 4
+    Caption = 'Select element'
+    TabOrder = 0
+    OnClick = btnSelectClick
+  end
+  object SciPeriodicTable1: TSciPeriodicTable
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = btnSelect
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 285
+    Top = 33
+    Width = 424
+    OnElementDblClick = SciPeriodicTable1ElementDblClick
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Top = 4
+    ParentColor = False
+    TabOrder = 1
+  end
+  object SciPeriodicTableDlg1: TSciPeriodicTableDlg
+    Left = 45
+    Top = 170
+  end
+end

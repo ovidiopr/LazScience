@@ -1,0 +1,40 @@
+object frmPeriodicTableDlg: TfrmPeriodicTableDlg
+  Left = 640
+  Height = 440
+  Top = 216
+  Width = 576
+  BorderStyle = bsSizeToolWin
+  Caption = 'Periodic Table of the Elements'
+  ClientHeight = 440
+  ClientWidth = 576
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 380
+  Position = poScreenCenter
+  LCLVersion = '4.6.0.0'
+  object SciPeriodicTable: TSciPeriodicTable
+    Left = 0
+    Height = 394
+    Top = 0
+    Width = 576
+    OnElementDblClick = SciPeriodicTableElementDblClick
+    Align = alClient
+    ParentColor = False
+    TabOrder = 0
+  end
+  object ButtonPanel: TButtonPanel
+    Left = 6
+    Height = 34
+    Top = 400
+    Width = 564
+    OKButton.Name = 'OKButton'
+    OKButton.Caption = 'Accept'
+    HelpButton.Name = 'HelpButton'
+    HelpButton.DefaultCaption = True
+    CloseButton.Name = 'CloseButton'
+    CloseButton.DefaultCaption = True
+    CancelButton.Name = 'CancelButton'
+    CancelButton.DefaultCaption = True
+    TabOrder = 1
+    ShowButtons = [pbOK, pbCancel]
+  end
+end
