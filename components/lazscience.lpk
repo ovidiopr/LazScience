@@ -65,14 +65,6 @@
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciPeriodicTableReg"/>
       </Item>
-      <Item>
-        <Filename Value="sciperiodictable_elements.res"/>
-        <Type Value="Binary"/>
-      </Item>
-      <Item>
-        <Filename Value="sciperiodictable_elements.rc"/>
-        <Type Value="Text"/>
-      </Item>
     </Files>
     <RequiredPkgs>
       <Item>
