@@ -4,8 +4,9 @@ unit uSciPeriodicTable;
 
 { TSciPeriodicTable - visual periodic table of the elements.
 
-  The element data (sciperiodictable_elements.csv) is linked into the executable as the
-  RCDATA resource SCIPERIODICTABLE_ELEMENTS (see sciperiodictable_elements.rc).
+  The element data (sciperiodictable_elements.csv) is compiled into the unit
+  through the Lazarus resource file sciperiodictable_elements.lrs (regenerate
+  it with  makelrs.py when the CSV changes).
   The element objects are shared by all instances (loaded once), so a
   TSciElement obtained from one table can be assigned to another one.
   The table always fills the client area of the control: cells and fonts are
@@ -14,7 +15,7 @@ unit uSciPeriodicTable;
 interface
 
 uses
-  Classes, SysUtils, Types, Math, Contnrs, Graphics, Controls, LCLType;
+  Classes, SysUtils, Types, Math, Contnrs, Graphics, Controls, LCLType, LResources;
 
 const
   SciPTColCount = 18; // groups
@@ -136,8 +137,6 @@ type
 
 implementation
 
-{$R sciperiodictable_elements.res}
-
 const
   ElementsResourceName = 'SCIPERIODICTABLE_ELEMENTS';
 
@@ -150,7 +149,7 @@ var
 procedure LoadElements;
 var
   Lines, Fields: TStringList;
-  Res: TResourceStream;
+  Res: TLResource;
   FS: TFormatSettings;
   I: Integer;
   E: TSciElement;
@@ -174,12 +173,10 @@ begin
     Fields.Delimiter := ',';
     Fields.StrictDelimiter := True;
 
-    Res := TResourceStream.Create(HInstance, ElementsResourceName, RT_RCDATA);
-    try
-      Lines.LoadFromStream(Res);
-    finally
-      Res.Free;
-    end;
+    Res := LazarusResources.Find(ElementsResourceName);
+    if Res = nil then
+      raise Exception.Create('TSciPeriodicTable: element data resource not found');
+    Lines.Text := Res.Value;
 
     // Columns: Z,Symbol,Element,Group,Period,AtomicMass,Density,Melt,Boil,Heat,Phase
     for I := 1 to Lines.Count - 1 do // line 0 is the header
@@ -602,6 +599,7 @@ begin
 end;
 
 initialization
+  {$I sciperiodictable_elements.lrs}
 
 finalization
   FreeAndNil(GElements);

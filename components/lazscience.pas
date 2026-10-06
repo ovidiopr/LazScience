@@ -9,8 +9,8 @@ interface
 
 uses
   uSciEdit, uSciPID, uSciReader, uSciReaderDlg, uSciThermoCouple, uSciDM3, 
-  uSciDM3Connector, uSciRestorer, uSciPeriodicTable, uSciPeriodicTableReg, 
-  uSciPeriodicTableDlg, LazarusPackageIntf;
+  uSciDM3Connector, uSciRestorer, uSciPeriodicTable, uSciPeriodicTableDlg, 
+  uSciPeriodicTableReg, LazarusPackageIntf;
 
 implementation
 
