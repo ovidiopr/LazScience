@@ -56,11 +56,6 @@ See [https://www.gnu.org/licenses/lgpl-2.1.html](https://www.gnu.org/licenses/lg
         <UnitName Value="uSciDM3Connector"/>
       </Item>
       <Item>
-        <Filename Value="uscirestorer.pas"/>
-        <HasRegisterProc Value="True"/>
-        <UnitName Value="uSciRestorer"/>
-      </Item>
-      <Item>
         <Filename Value="usciperiodictable.pas"/>
         <UnitName Value="uSciPeriodicTable"/>
       </Item>
@@ -72,6 +67,11 @@ See [https://www.gnu.org/licenses/lgpl-2.1.html](https://www.gnu.org/licenses/lg
         <Filename Value="usciperiodictablereg.pas"/>
         <HasRegisterProc Value="True"/>
         <UnitName Value="uSciPeriodicTableReg"/>
+      </Item>
+      <Item>
+        <Filename Value="uscirestorer.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="uSciRestorer"/>
       </Item>
     </Files>
     <RequiredPkgs>
