@@ -4,6 +4,7 @@
     <PathDelim Value="\"/>
     <Name Value="LazScience"/>
     <Type Value="RunAndDesignTime"/>
+    <Author Value="Ovidio Y. Peña Rodríguez"/>
     <CompilerOptions>
       <Version Value="11"/>
       <PathDelim Value="\"/>
@@ -11,6 +12,13 @@
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
     </CompilerOptions>
+    <Description Value="LazScience is a package of Lazarus/Free Pascal (LCL) components for building scientific and engineering-instrument applications"/>
+    <License Value="This package is released under the GNU Lesser General Public License v2.1 or later (LGPL-2.1-or-later).
+
+You are free to use, study, modify, and redistribute it under the terms of the LGPL. If you distribute a modified version of this package or any of its components, you must do so under the same license.
+
+See [https://www.gnu.org/licenses/lgpl-2.1.html](https://www.gnu.org/licenses/lgpl-2.1.html) for the full license text."/>
+    <Version Major="1"/>
     <Files>
       <Item>
         <Filename Value="usciedit.pas"/>
