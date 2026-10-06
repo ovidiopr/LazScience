@@ -228,7 +228,7 @@ Set to `False` to suppress automatic updates and call `Refresh` manually instead
 #### `ColorScheme: TDM3ColorScheme`
 Default: `csGrayscale`
 
-Controls how pixel values are mapped to display colours:
+Controls how pixel values are mapped to display colors:
 
 | Value | Effect |
 |---|---|

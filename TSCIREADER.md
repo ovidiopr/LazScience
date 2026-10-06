@@ -1,4 +1,4 @@
-# TSciReader & TSciReaderDlg
+# TSciReader and TSciReaderDlg
 
 Two complementary Lazarus/Free Pascal (LCL) components for loading delimited text data files (instrument logs, CSV/TSV exports, lab data dumps, etc.) into a Pascal application:
 
