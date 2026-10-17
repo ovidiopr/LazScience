@@ -16,7 +16,9 @@ type
     seoAutoUnits,          // auto-pick the best SI prefix after each edit
     seoScientificNotation, // fall back to scientific notation for extreme magnitudes
     seoCanonicalUnits,     // convert non-canonical units (e.g. bar, °C) to base units (e.g. Pa, K)
-    seoPreferredUnits      // always convert user-typed input to PreferredUnits (if set)
+    seoPreferredUnits,     // always convert user-typed input to PreferredUnits (if set)
+    seoKeepTypedUnits      // show the units spelled exactly as typed (e.g. 'um' stays 'um'
+                           // instead of becoming 'µm') as long as they weren't converted
   );
   TSciEditOptions = set of TSciEditOption;
 
@@ -53,6 +55,10 @@ type
     FOnUserEdit: TNotifyEvent;
     FUpdating: Boolean;
     FLastCommittedText: String;
+
+    FTypedUnits: String;
+    FTypedPrefix: TSIPrefixKind;
+    FTypedBaseUnits: String;
 
     FBatchDepth: Integer;
     FBatchPendingReparse: Boolean;
@@ -106,6 +112,8 @@ type
     procedure TrackBarSettleTimerHandler(Sender: TObject);
     function GetUnitDescription: String;
     function GetUnits: String;
+    function GetDisplayUnits: String;
+    procedure RememberTypedUnits(const AUnits: String; APrefix: TSIPrefixKind; const ABaseUnits: String);
     procedure UpdateText;
 
     function DecomposeMyUnit(const AUnits: String; out APrefix: TSIPrefixKind;
@@ -255,6 +263,35 @@ begin
   Result := mantStr + 'e' + IntToStr(mag);
 end;
 
+function NormalizeMicro(const S: String): String;
+begin
+  Result := StringReplace(S, 'µ', 'u', [rfReplaceAll]); // U+00B5
+  Result := StringReplace(Result, 'μ', 'u', [rfReplaceAll]); // U+03BC
+end;
+
+function ExtractUnitsPart(const S: String): String;
+var
+  i, j, n: Integer;
+begin
+  n := Length(S);
+  i := 1;
+  while (i <= n) and (S[i] in [' ', #9]) do Inc(i);
+  if (i <= n) and (S[i] in ['+', '-']) then Inc(i);
+  while (i <= n) and (S[i] in ['0'..'9', '.', ',']) do Inc(i);
+  // Exponent only if 'e' is really followed by digits, so 'eV' is kept as a unit
+  if (i <= n) and (S[i] in ['e', 'E']) then
+  begin
+    j := i + 1;
+    if (j <= n) and (S[j] in ['+', '-']) then Inc(j);
+    if (j <= n) and (S[j] in ['0'..'9']) then
+    begin
+      i := j;
+      while (i <= n) and (S[i] in ['0'..'9']) do Inc(i);
+    end;
+  end;
+  Result := Trim(Copy(S, i, MaxInt));
+end;
+
 { TSciEdit }
 
 constructor TSciEdit.Create(AOwner: TComponent);
@@ -275,6 +312,9 @@ begin
   FDetectedFamily := ufAny;
   FUpdating := False;
   FLastCommittedText := '';
+  FTypedUnits := '';
+  FTypedPrefix := pkNone;
+  FTypedBaseUnits := '';
   FBatchDepth := 0;
   FBatchPendingReparse := False;
   FTrackBar := nil;
@@ -408,7 +448,7 @@ function TSciEdit.DecomposeMyUnit(const AUnits: String; out APrefix: TSIPrefixKi
   out AUnprefixed: String; out AFactor, AOffset: Double; out AFamily: TUnitFamily;
   out AFailure: TUnitParseFailure): Boolean;
 begin
-  Result := TUnitParser.DecomposeUnit(AUnits, FUnitFamily, FCustomUnits,
+  Result := TUnitParser.DecomposeUnit(NormalizeMicro(AUnits), FUnitFamily, FCustomUnits,
     APrefix, AUnprefixed, AFactor, AOffset, AFamily, AFailure);
 end;
 
@@ -451,7 +491,13 @@ begin
 
   SetState(sesValid);
 
-  if (FBaseUnits = unprefixedUnits) and (FPrefix = targetPrefix) then Exit;
+  RememberTypedUnits(TargetUnits, targetPrefix, unprefixedUnits);
+
+  if (FBaseUnits = unprefixedUnits) and (FPrefix = targetPrefix) then
+  begin
+    UpdateText; // same units, but the spelling may have changed
+    Exit;
+  end;
 
   ACanonical := GetCanonicalValue;
 
@@ -504,25 +550,41 @@ end;
 function TSciEdit.GetUnits: String;
 begin
   if not FHasValue or (FState <> sesValid) then Exit('');
-  Result := TUnitParser.PrefixSymbolFor(FPrefix) + FBaseUnits;
+  Result := GetDisplayUnits;
+end;
+
+function TSciEdit.GetDisplayUnits: String;
+begin
+  if (seoKeepTypedUnits in FOptions) and (FTypedUnits <> '') and
+     (FTypedPrefix = FPrefix) and (FTypedBaseUnits = FBaseUnits) then
+    Result := FTypedUnits
+  else
+    Result := TUnitParser.PrefixSymbolFor(FPrefix) + FBaseUnits;
+end;
+
+procedure TSciEdit.RememberTypedUnits(const AUnits: String; APrefix: TSIPrefixKind; const ABaseUnits: String);
+begin
+  FTypedUnits := Trim(AUnits);
+  FTypedPrefix := APrefix;
+  FTypedBaseUnits := ABaseUnits;
 end;
 
 procedure TSciEdit.UpdateText;
 var
-  numStr, prefSym: String;
+  numStr, unitsStr: String;
 begin
   if FUpdating then Exit;
   if not FHasValue then Exit;
 
   numStr := FormatNumberAuto(FValue, FSignificantDigits, seoScientificNotation in FOptions);
-  prefSym := TUnitParser.PrefixSymbolFor(FPrefix);
+  unitsStr := GetDisplayUnits;
 
   FUpdating := True;
   try
     // Only append the space and unit if a unit or prefix actually exists
-    if (prefSym <> '') or (FBaseUnits <> '') then
+    if unitsStr <> '' then
     begin
-      Text := numStr + ' ' + prefSym + FBaseUnits;
+      Text := numStr + ' ' + unitsStr;
       Hint := GetUnitDescription;
     end
     else
@@ -810,6 +872,7 @@ begin
   FUnitFactor := factor;
   FUnitOffset := offset;
   FDetectedFamily := fam;
+  RememberTypedUnits(AUnits, unitPrefix, unprefixed);
 
   newCanonical := CanonicalFromValue(AValue, unitPrefix, factor, offset);
 
@@ -1012,6 +1075,12 @@ var
   fallbackUnprefixed: String;
   fallbackFactor, fallbackOffset: Double;
   fallbackFam: TUnitFamily;
+  parseText, typedUnits: String;
+  chkPrefix: TSIPrefixKind;
+  chkUnprefixed: String;
+  chkFactor, chkOffset: Double;
+  chkFam: TUnitFamily;
+  chkFailure: TUnitParseFailure;
 begin
   if Trim(Text) = '' then
   begin
@@ -1020,7 +1089,10 @@ begin
     Exit;
   end;
 
-  if TUnitParser.TryParseText(Text, FUnitFamily, FCustomUnits, typedNumber, canonical, fam, typedPrefix, matchedSymbol, factor, offset, failure) then
+  // Parse a copy with the micro sign mapped to 'u'
+  parseText := NormalizeMicro(Text);
+
+  if TUnitParser.TryParseText(parseText, FUnitFamily, FCustomUnits, typedNumber, canonical, fam, typedPrefix, matchedSymbol, factor, offset, failure) then
   begin
     // Fallback logic for pure numeric inputs
     if matchedSymbol = '' then
@@ -1054,6 +1126,15 @@ begin
     FBaseUnits := matchedSymbol;
     FUnitFactor := factor;
     FUnitOffset := offset;
+
+    // Remember the spelling the user typed
+    typedUnits := ExtractUnitsPart(Text);
+    if (typedUnits <> '') and
+       DecomposeMyUnit(typedUnits, chkPrefix, chkUnprefixed, chkFactor, chkOffset, chkFam, chkFailure) and
+       (chkPrefix = typedPrefix) and (chkUnprefixed = matchedSymbol) then
+      RememberTypedUnits(typedUnits, typedPrefix, matchedSymbol)
+    else
+      RememberTypedUnits('', pkNone, '');
 
     // ApplyCanonicalValue decides the final displayed unit/prefix:
     //   1. seoCanonicalUnits (snap to base SI units)
