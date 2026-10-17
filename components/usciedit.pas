@@ -105,6 +105,7 @@ type
     procedure TrackBarKeyUpHandler(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure TrackBarSettleTimerHandler(Sender: TObject);
     function GetUnitDescription: String;
+    function GetUnits: String;
     procedure UpdateText;
 
     function DecomposeMyUnit(const AUnits: String; out APrefix: TSIPrefixKind;
@@ -144,6 +145,7 @@ type
     property Value: Double read GetValue write SetValue stored False;
     property BaseUnits: String read FBaseUnits;
     property Prefix: TSIPrefixKind read FPrefix;
+    property Units: String read GetUnits stored False;
     property PreferredUnits: String read FPreferredUnits write SetPreferredUnits;
     property UnitFamily: TUnitFamily read FUnitFamily write SetUnitFamily default ufAny;
     property CustomUnits: String read FCustomUnits write SetCustomUnits;
@@ -497,6 +499,12 @@ begin
 
   if aliasList <> '' then
     Result := Result + ' (Equivalents: ' + aliasList + ')';
+end;
+
+function TSciEdit.GetUnits: String;
+begin
+  if not FHasValue or (FState <> sesValid) then Exit('');
+  Result := TUnitParser.PrefixSymbolFor(FPrefix) + FBaseUnits;
 end;
 
 procedure TSciEdit.UpdateText;
