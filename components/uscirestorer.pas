@@ -6,12 +6,12 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, ExtCtrls, Types, Math, IniFiles,
-  LCLIntf, LCLType, FileUtil, LazFileUtils;
+  LCLIntf, LCLType, FileUtil, LazFileUtils, Grids;
 
 type
   EWinRestorer = class(Exception);
 
-  TWhatSave = (svDefault, svSize, svLocation, svState, svPanels);
+  TWhatSave = (svDefault, svSize, svLocation, svState, svPanels, svGrids);
   STWhatSave = set of TWhatSave;
 
   { TIniLocation: where the INI file is stored }
@@ -49,6 +49,10 @@ type
     procedure SavePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String);
     procedure RestorePanelsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String; SavedDPI, CurDPI: Integer);
 
+    { StringGrid column-width save/restore, recursive to find grids anywhere }
+    procedure SaveGridsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String);
+    procedure RestoreGridsRecursive(Container: TWinControl; Ini: TCustomIniFile; const Section, FormKey: String; SavedDPI, CurDPI: Integer);
+
     { Auto-hook for the owner form }
     procedure HookOwner;
     procedure UnhookOwner;
@@ -70,7 +74,7 @@ type
     property IniLocation: TIniLocation read FIniLocation write FIniLocation default ilAppDir;
     property IniSection: String read FIniSection write FIniSection;
 
-    property DefaultWhatSave: STWhatSave read FDefaultWhatSave write FDefaultWhatSave default [svSize, svLocation, svState, svPanels];
+    property DefaultWhatSave: STWhatSave read FDefaultWhatSave write FDefaultWhatSave default [svSize, svLocation, svState, svPanels, svGrids];
     property AutoSaveRestoreOwner: Boolean read FAutoSaveRestoreOwner write FAutoSaveRestoreOwner default True;
     property SaveMinimized: Boolean read FSaveMinimized write FSaveMinimized default False;
   end;
@@ -91,7 +95,7 @@ begin
   FUserSubDir := '';
   FIniLocation := ilAppDir;
   FIniSection := '';
-  FDefaultWhatSave := [svSize, svLocation, svState, svPanels];
+  FDefaultWhatSave := [svSize, svLocation, svState, svPanels, svGrids];
   FAutoSaveRestoreOwner := True;
   FSaveMinimized := False;
   FHooked := False;
@@ -286,6 +290,71 @@ begin
   end;
 end;
 
+procedure TSciRestorer.SaveGridsRecursive(Container: TWinControl;
+  Ini: TCustomIniFile; const Section, FormKey: String);
+var
+  i, c: Integer;
+  G: TStringGrid;
+  Key: String;
+begin
+  for i := 0 to Container.ControlCount - 1 do
+  begin
+    // Recurse into any TWinControl child
+    if Container.Controls[i] is TWinControl then
+      SaveGridsRecursive(TWinControl(Container.Controls[i]), Ini, Section, FormKey);
+
+    if not (Container.Controls[i] is TStringGrid) then Continue;
+    G := TStringGrid(Container.Controls[i]);
+
+    // Skip unnamed grids or opted-out grids (Tag = -1)
+    if (G.Name = '') or (G.Tag = -1) then Continue;
+
+    Key := FormKey + '_Grid_' + G.Name;
+
+    // Remember the column count so a changed layout can be detected on restore
+    Ini.WriteInteger(Section, Key + '_ColCount', G.ColCount);
+    for c := 0 to G.ColCount - 1 do
+      Ini.WriteInteger(Section, Key + '_Col' + IntToStr(c), G.ColWidths[c]);
+  end;
+end;
+
+procedure TSciRestorer.RestoreGridsRecursive(Container: TWinControl;
+  Ini: TCustomIniFile; const Section, FormKey: String;
+  SavedDPI, CurDPI: Integer);
+var
+  i, c: Integer;
+  G: TStringGrid;
+  Key: String;
+  SavedCols, W: Integer;
+begin
+  for i := 0 to Container.ControlCount - 1 do
+  begin
+    // Recurse into any TWinControl child
+    if Container.Controls[i] is TWinControl then
+      RestoreGridsRecursive(TWinControl(Container.Controls[i]), Ini,
+        Section, FormKey, SavedDPI, CurDPI);
+
+    if not (Container.Controls[i] is TStringGrid) then Continue;
+    G := TStringGrid(Container.Controls[i]);
+
+    if (G.Name = '') or (G.Tag = -1) then Continue;
+
+    Key := FormKey + '_Grid_' + G.Name;
+
+    // Nothing saved for this grid yet: leave the design-time widths alone
+    SavedCols := Ini.ReadInteger(Section, Key + '_ColCount', -1);
+    if SavedCols < 0 then Continue;
+
+    // Restore only columns present both now and when saved
+    for c := 0 to Min(SavedCols, G.ColCount) - 1 do
+    begin
+      W := Ini.ReadInteger(Section, Key + '_Col' + IntToStr(c), -1);
+      if W < 0 then Continue;           // missing or invalid entry
+      G.ColWidths[c] := ScaleValue(W, SavedDPI, CurDPI);
+    end;
+  end;
+end;
+
 procedure TSciRestorer.SaveForm(TheForm: TForm; const Key: String;
   What: STWhatSave);
 var
@@ -307,8 +376,8 @@ begin
     Section := GetEffectiveIniSection;
     FormKey := GetFormKey(TheForm, Key);
 
-    // Only persist DPI when we are saving geometry
-    if [svSize, svLocation]*UseSet <> [] then
+    // Persist DPI whenever we save anything that is scaled on restore
+    if [svSize, svLocation, svPanels, svGrids]*UseSet <> [] then
       Ini.WriteInteger(Section, FormKey + '_DPI', TheForm.PixelsPerInch);
 
     if svSize in UseSet then
@@ -342,6 +411,9 @@ begin
 
     if svPanels in UseSet then
       SavePanelsRecursive(TheForm, Ini, Section, FormKey);
+
+    if svGrids in UseSet then
+      SaveGridsRecursive(TheForm, Ini, Section, FormKey);
 
   finally
     Ini.Free;
@@ -427,6 +499,14 @@ begin
       CurDPI := TheForm.PixelsPerInch;
       SavedDPI := Ini.ReadInteger(Section, FormKey + '_DPI', CurDPI);
       RestorePanelsRecursive(TheForm, Ini, Section, FormKey, SavedDPI, CurDPI);
+    end;
+
+    // StringGrid column widths
+    if svGrids in UseSet then
+    begin
+      CurDPI := TheForm.PixelsPerInch;
+      SavedDPI := Ini.ReadInteger(Section, FormKey + '_DPI', CurDPI);
+      RestoreGridsRecursive(TheForm, Ini, Section, FormKey, SavedDPI, CurDPI);
     end;
 
     // Window state, applied last so maximise/minimise works correctly
