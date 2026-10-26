@@ -23,7 +23,7 @@ type
                  ufForce, ufEnergy, ufPower, ufVolume, ufVelocity, ufDensity,
                  ufVolumetricFlow, ufMassFlow, ufGasThroughput, ufAcceleration,
                  ufArea, ufCharge, ufCapacitance, ufInductance, ufMagneticFlux,
-                 ufMagneticField, ufWavenumber, ufCustom);
+                 ufMagneticField, ufWavenumber, ufAngle, ufCustom);
 
   TSIPrefixKind = (pkQuecto, pkRonto, pkYocto, pkZepto, pkAtto, pkFemto, pkPico,
                    pkNano, pkMicro, pkMilli, pkCenti, pkDeci, pkNone, pkDeca,
@@ -81,7 +81,7 @@ const
     (Kind: pkQuetta; Symbol: 'Q';  AltSymbol: '';  Exponent: 30;  Common: True)
   );
 
-  UnitFamilyCount = 26;
+  UnitFamilyCount = 27;
   UnitFamilyInfos: array[0..UnitFamilyCount - 1] of TUnitFamilyInfo = (
     (Family: ufLength; BaseSymbol: 'm'; Name: 'Length'; AliasCount: 6;
      Aliases: ((Symbol: 'in'), (Symbol: 'ft'), (Symbol: 'yd'), (Symbol: 'mi'),
@@ -185,6 +185,10 @@ const
 
     (Family: ufWavenumber; BaseSymbol: 'm^-1'; Name: 'Wavenumber'; AliasCount: 3;
      Aliases: ((Symbol: '1/m'), (Symbol: 'cm^-1'), (Symbol: '1/cm'), (Symbol: ''),
+               (Symbol: ''), (Symbol: ''), (Symbol: ''), (Symbol: ''))),
+
+    (Family: ufAngle; BaseSymbol: 'rad'; Name: 'Angle'; AliasCount: 2;
+     Aliases: ((Symbol: 'deg'), (Symbol: '°'), (Symbol: ''), (Symbol: ''),
                (Symbol: ''), (Symbol: ''), (Symbol: ''), (Symbol: '')))
   );
 
@@ -427,6 +431,7 @@ begin
     'kn':  Q := MakeQ(0.5144444444444445, 0, 0, 1, -1, 0, 0, 0, 0);    // knot
     'Gal': Q := MakeQ(0.01, 0, 0,  1, -2, 0, 0, 0, 0);                 // galileo
     'gn':  Q := MakeQ(9.80665, 0, 0,  1, -2, 0, 0, 0, 0);              // standard gravity
+    'deg', '°': Q := MakeQ(Pi/180, 0, 0,  0,  0, 0, 0, 0, 0);          // degree (plane angle)
     'ha':  Q := MakeQ(10000.0, 0, 0,  2,  0, 0, 0, 0, 0);              // hectare
     'acre':Q := MakeQ(4046.85642, 0, 0,  2,  0, 0, 0, 0, 0);           // acre
     'Ah':  Q := MakeQ(3600.0, 0, 0,  0,  1, 1, 0, 0, 0);               // ampere-hour
