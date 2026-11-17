@@ -15,6 +15,7 @@
 //  Format: http://www.er-c.org/cbb/info/dmformat/                          //
 //          https://imagej.nih.gov/ij/plugins/DM3Format.gj.html             //
 //                                                                          //
+//  2026-11-17 Fixed pixel order, DM stores x fastest (Ovidio)              //
 //  2026-09-14 Complete rewrite of the component, now divided in a parser   //
 //             (non-gui) and a Connector; bug fixes (Ovidio)                //
 //  2024-10-05 Ported to Pascal                                             //
@@ -1329,21 +1330,22 @@ begin
     // Grabs the whole DataSize-byte image block in one go
     Strm := GetDataChunk(DataOffset, DataSize, OwnsStrm);
     try
+      // DM stores pixels x fastest, then y, then z
       // Check if image DataType is implemented, then read it
       case DataType of
         // 16-bit LE signed integer (SmallInt, LE)
         SIGNED_INT16_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLESmallInt(Strm);
         end;
 
         // 32-bit LE floating point (Single, LE)
         REAL4_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLEFloat(Strm);
         end;
 
@@ -1351,9 +1353,9 @@ begin
         COMPLEX8_DATA: begin
           SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
 
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
               begin
                 FDataReal[i, j, k] := ReadLEFloat(Strm);
                 FDataImag[i, j, k] := ReadLEFloat(Strm);
@@ -1366,70 +1368,71 @@ begin
             SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
             SetLength(TmpImage, ImWidth, ImHeight, ImDepth);
 
-            for i := 0 to ImWidth - 1 do
+            // Read x fastest, then rebuild the packed FFT
+            for k := 0 to ImDepth - 1 do
               for j := 0 to ImHeight - 1 do
-                for k := 0 to ImDepth - 1 do
+                for i := 0 to ImWidth - 1 do
                 begin
                   TmpImage[i, j, k] := ReadLEFloat(Strm);
                   FDataReal[i, j, k] := 1.0;
                 end;
 
-            for i := 0 to ImWidth - 1 do
-              for j := (1 + ImHeight div 2) to ImHeight - 1 do
+            for j := 0 to ImHeight - 1 do
+              for i := (1 + ImWidth div 2) to ImWidth - 1 do
                 for k := 0 to ImDepth - 1 do
                 begin
-                  FDataReal[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2), k];
-                  FDataImag[i, j, k] := TmpImage[i, 2*(j - ImHeight div 2) + 1, k];
+                  FDataReal[i, j, k] := TmpImage[2*(i - ImWidth div 2), j, k];
+                  FDataImag[i, j, k] := TmpImage[2*(i - ImWidth div 2) + 1, j, k];
                 end;
 
-            for i := 0 to ImWidth - 1 do
-              for j := 1 to (ImHeight div 2) - 1 do
+            for j := 0 to ImHeight - 1 do
+              for i := 1 to (ImWidth div 2) - 1 do
                 for k := 0 to ImDepth - 1 do
                 begin
-                  FDataReal[i, j, k] := FDataReal[ImWidth - 1 - i, ImHeight - j, k];
-                  FDataImag[i, j, k] := -FDataImag[ImWidth - 1 - i, ImHeight - j, k]
+                  FDataReal[i, j, k] := FDataReal[ImWidth - i, ImHeight - 1 - j, k];
+                  FDataImag[i, j, k] := -FDataImag[ImWidth - i, ImHeight - 1 - j, k];
                 end;
 
-            for i := (1 + ImWidth div 2) to ImWidth - 1 do
+            for j := (1 + ImHeight div 2) to ImHeight - 1 do
               for k := 0 to ImDepth - 1 do
               begin
-                FDataReal[i, 0, k] := TmpImage[i - ImWidth div 2, 0, k];
-                FDataImag[i, 0, k] := TmpImage[i - ImWidth div 2, 1, k];
+                FDataReal[0, j, k] := TmpImage[0, j - ImHeight div 2, k];
+                FDataImag[0, j, k] := TmpImage[1, j - ImHeight div 2, k];
               end;
 
-            for i := 1 to (ImWidth div 2) - 1 do
+            for j := 1 to (ImHeight div 2) - 1 do
               for k := 0 to ImDepth - 1 do
               begin
-                FDataReal[i, 0, k] := FDataReal[ImWidth - i, 0, k];
-                FDataImag[i, 0, k] := -FDataImag[ImWidth - i, 0, k];
+                FDataReal[0, j, k] := FDataReal[0, ImHeight - j, k];
+                FDataImag[0, j, k] := -FDataImag[0, ImHeight - j, k];
               end;
 
-            for i := (1 + ImWidth div 2) to ImWidth - 1 do
+            for j := (1 + ImHeight div 2) to ImHeight - 1 do
               for k := 0 to ImDepth - 1 do
               begin
-                FDataReal[i, ImHeight div 2, k] := TmpImage[i, 0, k];
-                FDataImag[i, ImHeight div 2, k] := TmpImage[i, 1, k];
+                FDataReal[ImWidth div 2, j, k] := TmpImage[0, j, k];
+                FDataImag[ImWidth div 2, j, k] := TmpImage[1, j, k];
               end;
 
-            for i := 1 to (ImWidth div 2) - 1 do
+            for j := 1 to (ImHeight div 2) - 1 do
               for k := 0 to ImDepth - 1 do
               begin
-                FDataReal[i, ImHeight div 2, k] := FDataReal[ImWidth - i, ImHeight div 2, k];
-                FDataImag[i, ImHeight div 2, k] := -FDataImag[ImWidth - i, ImHeight div 2, k];
+                FDataReal[ImWidth div 2, j, k] := FDataReal[ImWidth div 2, ImHeight - j, k];
+                FDataImag[ImWidth div 2, j, k] := -FDataImag[ImWidth div 2, ImHeight - j, k];
               end;
 
             for k := 0 to ImDepth - 1 do
             begin
-              FDataReal[0, 0, k] := TmpImage[0, 1, k];
+              FDataReal[0, 0, k] := TmpImage[1, 0, k];
               FDataImag[0, 0, k] := 0.0;
 
-              FDataReal[ImWidth div 2, 0, k] := TmpImage[0, 0, k];
-              FDataImag[ImWidth div 2, 0, k] := 0.0;
-
-              FDataReal[0, ImHeight div 2, k] := TmpImage[ImWidth div 2, 1, k];
+              FDataReal[0, ImHeight div 2, k] := TmpImage[0, 0, k];
               FDataImag[0, ImHeight div 2, k] := 0.0;
 
-              FDataReal[ImWidth div 2, ImHeight div 2, k] := TmpImage[ImWidth div 2, 0, k];
+              FDataReal[ImWidth div 2, 0, k] := TmpImage[1, ImHeight div 2, k];
+              FDataImag[ImWidth div 2, 0, k] := 0.0;
+
+              FDataReal[ImWidth div 2, ImHeight div 2, k] := TmpImage[0, ImHeight div 2, k];
               FDataImag[ImWidth div 2, ImHeight div 2, k] := 0.0;
             end;
           finally
@@ -1439,49 +1442,49 @@ begin
 
         // 8-bit unsigned integer (Byte)
         UNSIGNED_INT8_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadByte(Strm);
         end;
 
         // 32-bit LE signed integer (LongInt, LE)
         SIGNED_INT32_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLELongInt(Strm);
         end;
 
         // 8-bit signed integer (ShorInt)
         SIGNED_INT8_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadShortInt(Strm);
         end;
 
         // 16-bit LE unsigned integer (Word, LE)
         UNSIGNED_INT16_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLEWord(Strm);
         end;
 
         // 32-bit LE unsigned integer (Cardinal, LE)
         UNSIGNED_INT32_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLECardinal(Strm);
         end;
 
         // 64-bit LE floating point (Double, LE)
         REAL8_DATA: begin
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
                 FDataReal[i, j, k] := ReadLEDouble(Strm);
         end;
 
@@ -1489,9 +1492,9 @@ begin
         COMPLEX16_DATA: begin
           SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
 
-          for i := 0 to ImWidth - 1 do
+          for k := 0 to ImDepth - 1 do
             for j := 0 to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
+              for i := 0 to ImWidth - 1 do
               begin
                 FDataReal[i, j, k] := ReadLEDouble(Strm);
                 FDataImag[i, j, k] := ReadLEDouble(Strm);
