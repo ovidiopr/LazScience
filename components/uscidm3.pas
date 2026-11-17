@@ -15,7 +15,7 @@
 //  Format: http://www.er-c.org/cbb/info/dmformat/                          //
 //          https://imagej.nih.gov/ij/plugins/DM3Format.gj.html             //
 //                                                                          //
-//  2026-11-17 Fixed pixel order, DM stores x fastest (Ovidio)              //
+//  2026-11-17 Fixed pixel order and packed FFT layout (Ovidio)             //
 //  2026-09-14 Complete rewrite of the component, now divided in a parser   //
 //             (non-gui) and a Connector; bug fixes (Ovidio)                //
 //  2024-10-05 Ported to Pascal                                             //
@@ -1271,11 +1271,11 @@ end;
 
 procedure TSciDM3.ReadImageData;
 var
-  i, j, k: Integer;
+  i, j, k, m, q, N: Integer;
   ImWidth, ImHeight, ImDepth: Integer;
   DataOffset, DataSize, PixelDepth: Integer;
   TagRoot: String;
-  TmpImage: TImageData;
+  PackedData: array of Single;
   Strm: TStream;
   OwnsStrm: Boolean;
 
@@ -1291,6 +1291,25 @@ var
     if not TryStrToInt(Raw, Result) then
       raise Exception.CreateFmt('Tag "%s" has non-integer value "%s" in "%s".',
                                 [TagName, Raw, ExtractFileName(FFileName)]);
+  end;
+
+
+  // PackedData FFT element at (row, col) of slice k
+  procedure SetC(Row, Col: Integer; Re, Im: Double);
+  begin
+    FDataReal[Col, Row, k] := Re;
+    FDataImag[Col, Row, k] := Im;
+  end;
+
+  // Conjugate of the element mirrored through the origin
+  procedure Mirror(Row, Col: Integer);
+  var
+    r2, c2: Integer;
+  begin
+    r2 := (2*N - Row) mod (2*N);
+    c2 := (2*N - Col) mod (2*N);
+    FDataReal[Col, Row, k] := FDataReal[c2, r2, k];
+    FDataImag[Col, Row, k] := -FDataImag[c2, r2, k];
   end;
 
 begin
@@ -1362,81 +1381,69 @@ begin
               end;
         end;
 
-        // 32-bit LE packed complex (FFT)
+        // 32-bit LE packed complex: FFT of a real N x N image, origin at the centre
         PACKED_DATA: begin
+          if (ImWidth <> ImHeight) or Odd(ImWidth) then
+            raise Exception.CreateFmt('PackedData complex data in "%s" is not square with an even size.',
+                                      [ExtractFileName(FFileName)]);
+          N := ImWidth div 2;
+          SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
+          SetLength(PackedData, ImWidth*ImHeight);
           try
-            SetLength(FDataImag, ImWidth, ImHeight, ImDepth);
-            SetLength(TmpImage, ImWidth, ImHeight, ImDepth);
-
-            // Read x fastest, then rebuild the packed FFT
-            for k := 0 to ImDepth - 1 do
-              for j := 0 to ImHeight - 1 do
-                for i := 0 to ImWidth - 1 do
-                begin
-                  TmpImage[i, j, k] := ReadLEFloat(Strm);
-                  FDataReal[i, j, k] := 1.0;
-                end;
-
-            for j := 0 to ImHeight - 1 do
-              for i := (1 + ImWidth div 2) to ImWidth - 1 do
-                for k := 0 to ImDepth - 1 do
-                begin
-                  FDataReal[i, j, k] := TmpImage[2*(i - ImWidth div 2), j, k];
-                  FDataImag[i, j, k] := TmpImage[2*(i - ImWidth div 2) + 1, j, k];
-                end;
-
-            for j := 0 to ImHeight - 1 do
-              for i := 1 to (ImWidth div 2) - 1 do
-                for k := 0 to ImDepth - 1 do
-                begin
-                  FDataReal[i, j, k] := FDataReal[ImWidth - i, ImHeight - 1 - j, k];
-                  FDataImag[i, j, k] := -FDataImag[ImWidth - i, ImHeight - 1 - j, k];
-                end;
-
-            for j := (1 + ImHeight div 2) to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[0, j, k] := TmpImage[0, j - ImHeight div 2, k];
-                FDataImag[0, j, k] := TmpImage[1, j - ImHeight div 2, k];
-              end;
-
-            for j := 1 to (ImHeight div 2) - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[0, j, k] := FDataReal[0, ImHeight - j, k];
-                FDataImag[0, j, k] := -FDataImag[0, ImHeight - j, k];
-              end;
-
-            for j := (1 + ImHeight div 2) to ImHeight - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[ImWidth div 2, j, k] := TmpImage[0, j, k];
-                FDataImag[ImWidth div 2, j, k] := TmpImage[1, j, k];
-              end;
-
-            for j := 1 to (ImHeight div 2) - 1 do
-              for k := 0 to ImDepth - 1 do
-              begin
-                FDataReal[ImWidth div 2, j, k] := FDataReal[ImWidth div 2, ImHeight - j, k];
-                FDataImag[ImWidth div 2, j, k] := -FDataImag[ImWidth div 2, ImHeight - j, k];
-              end;
-
             for k := 0 to ImDepth - 1 do
             begin
-              FDataReal[0, 0, k] := TmpImage[1, 0, k];
-              FDataImag[0, 0, k] := 0.0;
+              for i := 0 to High(PackedData) do
+                PackedData[i] := ReadLEFloat(Strm);
 
-              FDataReal[0, ImHeight div 2, k] := TmpImage[0, 0, k];
-              FDataImag[0, ImHeight div 2, k] := 0.0;
+              // Purely real values
+              SetC(N, 0, PackedData[0], 0);
+              SetC(0, 0, PackedData[1], 0);
+              SetC(N, N, PackedData[2*N*N], 0);
+              SetC(0, N, PackedData[2*N*N + 1], 0);
 
-              FDataReal[ImWidth div 2, 0, k] := TmpImage[1, ImHeight div 2, k];
-              FDataImag[ImWidth div 2, 0, k] := 0.0;
+              // Stored complex values
+              for i := 0 to N - 1 do
+                for j := 0 to N - 2 do
+                begin
+                  q := 2*i*N + 2 + 2*j;
+                  SetC(i, N + 1 + j, PackedData[q], PackedData[q + 1]);
+                end;
+              for m := 0 to N - 2 do
+              begin
+                q := 2*N + 2*N*m;
+                SetC(N + 1 + m, 0, PackedData[q], PackedData[q + 1]);
+              end;
+              for j := 0 to N - 2 do
+              begin
+                q := 2*N*N + 2 + 2*j;
+                SetC(N, N + 1 + j, PackedData[q], PackedData[q + 1]);
+              end;
+              for m := 0 to N*(N - 1) - 1 do
+              begin
+                q := 2*N*N + 2*N + 2*m;
+                SetC(N + 1 + m div N, N + m mod N, PackedData[q], PackedData[q + 1]);
+              end;
 
-              FDataReal[ImWidth div 2, ImHeight div 2, k] := TmpImage[0, ImHeight div 2, k];
-              FDataImag[ImWidth div 2, ImHeight div 2, k] := 0.0;
+              // Hermitian symmetry of a real image fills the rest
+              for j := 1 to N - 1 do
+              begin
+                Mirror(0, j);
+                Mirror(N, j);
+              end;
+              for i := 1 to N - 1 do
+              begin
+                Mirror(i, 0);
+                Mirror(i, N);
+              end;
+              for i := 1 to N - 1 do
+                for j := 1 to N - 1 do
+                begin
+                  Mirror(i, j);
+                  Mirror(N + i, j);
+                end;
             end;
           finally
-            SetLength(TmpImage, 0, 0, 0);
+            SetLength(PackedData, 0);
           end;
         end;
 
