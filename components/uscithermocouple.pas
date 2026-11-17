@@ -41,6 +41,9 @@ type
     property ColdJunctionTemp: Double read FColdJunctionTemp write FColdJunctionTemp;
   end;
 
+// Stateless conversion (thread-safe); Voltage in mV, Tcj in the same Units
+function VoltageToTemperature(const Voltage: Double; TC_Type: TThermoCouple; Units: TTempUnits; const Tcj: Double): Double;
+
 procedure Register;
 
 implementation
