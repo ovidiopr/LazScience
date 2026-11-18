@@ -5,7 +5,7 @@ unit uSciReader;
 interface
 
 uses
-  Classes, SysUtils, DateUtils, LResources, uFormula;
+  Classes, SysUtils, DateUtils, Math, LResources, uFormula;
 
 type
   TTXTOptions = class(TPersistent)
@@ -33,6 +33,7 @@ type
     FDateTimeFormat: String;
     FFileDateFallback: Boolean;
     FHeaderVars: TStringList;
+    FSkipInvalidRows: Boolean;
 
     procedure SetHeaderVars(Value: TStrings);
     function GetHeaderVars: TStrings;
@@ -58,6 +59,8 @@ type
     property FileDateFallback: Boolean read FFileDateFallback write FFileDateFallback;
     // Name=Text pairs: the number after Text in the file is the variable Name
     property HeaderVars: TStrings read GetHeaderVars write SetHeaderVars;
+    // Drop rows whose X or Y is not a number (text, blank or invalid result)
+    property SkipInvalidRows: Boolean read FSkipInvalidRows write FSkipInvalidRows;
   published
     property Delimiter: Char read FDelimiter write FDelimiter default ' ';
     property Comment: Char read FComment write FComment default '#';
@@ -97,6 +100,8 @@ type
     function YExtraNames: TStringArray;
     function FindHeaderNumber(const Key: String; out V: Double): Boolean;
     procedure ComputeHeaderValues;
+    function CellIsNumber(ACol, ARow: Integer): Boolean;
+    procedure RemoveInvalidRows;
     function GetHeaderCount: Integer;
     function GetHeaderName(Index: Integer): String;
     function GetHeaderValue(Index: Integer): Double;
@@ -110,6 +115,8 @@ type
     procedure Clear;
 
     function FileDate: TDateTime;
+    // True if X and Y of the row come from numbers and are finite
+    function RowIsValid(ARow: Integer): Boolean;
     // Header value by name, or ADefault when it is not defined
     function HeaderValueByName(const AName: String; ADefault: Double = 0.0): Double;
 
@@ -214,6 +221,7 @@ begin
   FDateTimeFormat := 'dd/mm/yyyy, hh:nn:ss';
   FFileDateFallback := True;
   FHeaderVars := TStringList.Create;
+  FSkipInvalidRows := False;
 end;
 
 destructor TTXTOptions.Destroy;
@@ -259,6 +267,7 @@ begin
     FDateTimeFormat := Src.FDateTimeFormat;
     FFileDateFallback := Src.FFileDateFallback;
     FHeaderVars.Assign(Src.FHeaderVars);
+    FSkipInvalidRows := Src.FSkipInvalidRows;
   end
   else
     inherited Assign(Source);
@@ -286,7 +295,8 @@ begin
             (FDateTimeLength = Other.FDateTimeLength) and
             (FDateTimeFormat = Other.FDateTimeFormat) and
             (FFileDateFallback = Other.FFileDateFallback) and
-            (FHeaderVars.Text = Other.FHeaderVars.Text);
+            (FHeaderVars.Text = Other.FHeaderVars.Text) and
+            (FSkipInvalidRows = Other.FSkipInvalidRows);
 end;
 
 { TSciReader }
@@ -596,6 +606,79 @@ begin
   end;
 
   ComputeHeaderValues;
+
+  if FOptions.SkipInvalidRows then
+    RemoveInvalidRows;
+end;
+
+function TSciReader.CellIsNumber(ACol, ARow: Integer): Boolean;
+var
+  S: String;
+  V: Double;
+  FS: TFormatSettings;
+begin
+  S := Trim(GetCell(ACol, ARow));
+  FS := DefaultFormatSettings;
+  FS.DecimalSeparator := FOptions.Decimal;
+  FS.ThousandSeparator := FOptions.Thousand;
+  Result := (S <> '') and TryStrToFloat(S, V, FS);
+end;
+
+function TSciReader.RowIsValid(ARow: Integer): Boolean;
+var
+  V: Double;
+
+  // Columns used by the formula must be numbers; a broken formula reports its error instead
+  function FormulaColumnsOK(AF: TFormula): Boolean;
+  var
+    j: Integer;
+  begin
+    Result := True;
+    if not AF.Valid then Exit;
+    for j := 0 to FMaxColCount - 1 do
+      if AF.UsesVariable(ColumnLetter(j)) and not CellIsNumber(j, ARow) then
+        Exit(False);
+  end;
+
+begin
+  Result := False;
+  if (ARow < 0) or (ARow >= FRowCount) then Exit;
+
+  if Trim(FOptions.XFormula) = '' then
+  begin
+    if not CellIsNumber(FOptions.XCol, ARow) then Exit;
+  end
+  else if not FormulaColumnsOK(EnsureXFormula) then Exit;
+
+  if Trim(FOptions.YFormula) = '' then
+  begin
+    if not CellIsNumber(FOptions.YCol, ARow) then Exit;
+  end
+  else if not FormulaColumnsOK(EnsureYFormula) then Exit;
+
+  V := GetX(ARow);
+  if IsNan(V) or IsInfinite(V) then Exit;
+  V := GetY(ARow);
+  if IsNan(V) or IsInfinite(V) then Exit;
+
+  Result := True;
+end;
+
+// Compact FData in place, keeping only the valid rows
+procedure TSciReader.RemoveInvalidRows;
+var
+  i, n: Integer;
+begin
+  n := 0;
+  for i := 0 to FRowCount - 1 do
+    if RowIsValid(i) then
+    begin
+      if n <> i then
+        FData[n] := FData[i];
+      Inc(n);
+    end;
+  FRowCount := n;
+  SetLength(FData, n);
 end;
 
 // First number after Key on the first line that contains Key (case-insensitive)

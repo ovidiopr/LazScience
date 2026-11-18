@@ -701,6 +701,23 @@ object FTXTDialog: TFTXTDialog
       TabOrder = 5
       Text = 'Y'
     end
+    object chbSkipInvalidRows: TCheckBox
+      AnchorSideLeft.Control = txtYLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnFmtOptions
+      AnchorSideTop.Side = asrCenter
+      Left = 838
+      Height = 19
+      Hint = 'Ignore rows whose X or Y is not a number (text, blank cells or invalid formula results)'
+      Top = 6
+      Width = 125
+      BorderSpacing.Left = 10
+      Caption = 'Skip non-numeric rows'
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 6
+      OnChange = chbSkipInvalidRowsChange
+    end
   end
   object pnFormulaOptions: TPanel
     Left = 0

@@ -68,6 +68,7 @@ type
     btnRefresh: TBitBtn;
     cbbDate: TComboBox;
     chbFileDateFallback: TCheckBox;
+    chbSkipInvalidRows: TCheckBox;
     cbbThousand: TComboBox;
     cbbDelimiter: TComboBox;
     cbbComment: TComboBox;
@@ -136,6 +137,7 @@ type
     procedure cbbQuotationChange(Sender: TObject);
     procedure cbbThousandChange(Sender: TObject);
     procedure chbFileDateFallbackChange(Sender: TObject);
+    procedure chbSkipInvalidRowsChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure miSetAsDateTimeClick(Sender: TObject);
@@ -500,6 +502,7 @@ begin
   FOptionsView.DateTimeFormat := DateTimeFormat;
   FOptionsView.FileDateFallback := chbFileDateFallback.Checked;
   FOptionsView.HeaderVars := vleHeaderVars.Strings;
+  FOptionsView.SkipInvalidRows := chbSkipInvalidRows.Checked;
   Result := FOptionsView;
 end;
 
@@ -794,6 +797,7 @@ begin
     DateTimeFormat := Value.DateTimeFormat;
     chbFileDateFallback.Checked := Value.FileDateFallback;
     vleHeaderVars.Strings.Assign(Value.HeaderVars);
+    chbSkipInvalidRows.Checked := Value.SkipInvalidRows;
   finally
     FUpdating := False;
   end;
@@ -997,6 +1001,11 @@ begin
   RefreshView;
 end;
 
+procedure TFTXTDialog.chbSkipInvalidRowsChange(Sender: TObject);
+begin
+  RefreshView;
+end;
+
 constructor TFTXTDialog.Create(TheOwner: TComponent);
 begin
   FCharOptions := TCharListOptions.Create;
@@ -1049,6 +1058,7 @@ begin
   DateTimeFormat := 'dd/mm/yyyy, hh:nn:ss';
   chbFileDateFallback.Checked := True;
   vleHeaderVars.Strings.Clear;
+  chbSkipInvalidRows.Checked := False;
   FUpdating := False;
   RefreshView;
 end;
@@ -1181,6 +1191,7 @@ begin
     FPreviewReader.Options.DateTimeFormat := DateTimeFormat;
     FPreviewReader.Options.FileDateFallback := chbFileDateFallback.Checked;
     FPreviewReader.Options.HeaderVars := vleHeaderVars.Strings;
+    FPreviewReader.Options.SkipInvalidRows := chbSkipInvalidRows.Checked;
 
     // Load string data directly into the preview
     FPreviewReader.LoadFromString(mmSource.Text);
@@ -1322,6 +1333,7 @@ begin
       Ini.WriteInteger('TXTOptions', 'DateTimeLength', Options.DateTimeLength);
       Ini.WriteString('TXTOptions', 'DateTimeFormat', Options.DateTimeFormat);
       Ini.WriteBool('TXTOptions', 'FileDateFallback', Options.FileDateFallback);
+      Ini.WriteBool('TXTOptions', 'SkipInvalidRows', Options.SkipInvalidRows);
       // One Name=Text line per header value
       Ini.EraseSection('HeaderValues');
       for i := 0 to Options.HeaderVars.Count - 1 do
@@ -1373,6 +1385,7 @@ begin
         DateTimeLength := Ini.ReadInteger('TXTOptions', 'DateTimeLength', 0);
         DateTimeFormat := Ini.ReadString('TXTOptions', 'DateTimeFormat', 'dd/mm/yyyy, hh:nn:ss');
         chbFileDateFallback.Checked := Ini.ReadBool('TXTOptions', 'FileDateFallback', True);
+        chbSkipInvalidRows.Checked := Ini.ReadBool('TXTOptions', 'SkipInvalidRows', False);
         HeaderList.Clear;
         Ini.ReadSectionValues('HeaderValues', HeaderList);
         vleHeaderVars.Strings.Assign(HeaderList);

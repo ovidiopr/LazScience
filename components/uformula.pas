@@ -59,6 +59,7 @@ type
     FValid: Boolean;
     FErrorMessage: String;
     FValidVars: TStringArray; // allowed variable names for THIS formula
+    FUsedVars: TStringArray;  // variable names that appear in the expression
     FDecimalSep: Char;
     FThousandSep: Char;
 
@@ -72,6 +73,7 @@ type
     procedure NextToken;
     procedure Expect(const Sym: String);
     function IsValidVarName(const Name: String): Boolean;
+    procedure AddUsedVar(const Name: String);
 
     // Recursive-descent parser, one level per precedence tier
     function ParseExpr: TExprNode;      // + -
@@ -90,6 +92,8 @@ type
 
     function Evaluate(X, Y: Double; I, N: Integer): Double; overload;
     function Evaluate(const Names: array of String; const Values: array of Double): Double; overload;
+    // True if the expression refers to this variable (case-insensitive)
+    function UsesVariable(const Name: String): Boolean;
 
     property Expression: String read FExpression;
     // False if the expression didn't parse - Evaluate then always returns 0
@@ -480,6 +484,7 @@ begin
             raise EFormulaError.CreateFmt('Unknown variable "%s"', [FTokText]);
 
           Result := TVarNode.Create(Name);
+          AddUsedVar(Name);
         end;
       end;
   else
@@ -500,11 +505,29 @@ begin
     end;
 end;
 
+procedure TFormula.AddUsedVar(const Name: String);
+begin
+  if UsesVariable(Name) then Exit;
+  SetLength(FUsedVars, Length(FUsedVars) + 1);
+  FUsedVars[High(FUsedVars)] := Name;
+end;
+
+function TFormula.UsesVariable(const Name: String): Boolean;
+var
+  j: Integer;
+begin
+  Result := False;
+  for j := 0 to High(FUsedVars) do
+    if SameText(FUsedVars[j], Name) then
+      Exit(True);
+end;
+
 // TFormula
 
 procedure TFormula.Compile(const Expression: String);
 begin
   FRoot := nil;
+  SetLength(FUsedVars, 0);
   FValid := False;
   FErrorMessage := '';
 
