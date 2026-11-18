@@ -1,11 +1,11 @@
 object FTXTDialog: TFTXTDialog
   Left = 204
-  Height = 552
+  Height = 632
   Top = 191
   Width = 970
   BorderStyle = bsSizeToolWin
   Caption = 'Spectra options'
-  ClientHeight = 552
+  ClientHeight = 632
   ClientWidth = 970
   Position = poMainFormCenter
   LCLVersion = '4.8.0.0'
@@ -1000,6 +1000,71 @@ object FTXTDialog: TFTXTDialog
       OnChange = chbFileDateFallbackChange
     end
   end
+  object pnHeaderOptions: TPanel
+    Left = 0
+    Height = 80
+    Top = 136
+    Width = 970
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 80
+    ClientWidth = 970
+    ParentFont = False
+    TabOrder = 8
+    object HeaderVarsLbl: TLabel
+      AnchorSideLeft.Control = pnHeaderOptions
+      AnchorSideTop.Control = pnHeaderOptions
+      Left = 5
+      Height = 16
+      Top = 5
+      Width = 95
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      Caption = 'Header values:'
+      ParentColor = False
+    end
+    object vleHeaderVars: TValueListEditor
+      AnchorSideLeft.Control = HeaderVarsLbl
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = pnHeaderOptions
+      Left = 105
+      Height = 70
+      Hint = 'Each value is the first number after the text, e.g. Name INT, text "Integration Time (usec):". Use the name in the formulas, e.g. Y = B/INT'
+      Top = 5
+      Width = 420
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      FixedCols = 0
+      ParentShowHint = False
+      RowCount = 2
+      ShowHint = True
+      TabOrder = 0
+      DisplayOptions = [doColumnTitles, doAutoColResize]
+      KeyOptions = [keyEdit, keyAdd, keyDelete, keyUnique]
+      OnEditingDone = vleHeaderVarsEditingDone
+      TitleCaptions.Strings = (
+        'Name'
+        'Text before the value'
+      )
+    end
+    object lblHeaderValues: TLabel
+      AnchorSideLeft.Control = vleHeaderVars
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = vleHeaderVars
+      AnchorSideRight.Control = pnHeaderOptions
+      AnchorSideRight.Side = asrBottom
+      Left = 535
+      Height = 70
+      Top = 5
+      Width = 430
+      Anchors = [akTop, akLeft, akRight]
+      AutoSize = False
+      BorderSpacing.Left = 10
+      BorderSpacing.Right = 5
+      ParentColor = False
+      WordWrap = True
+    end
+  end
   object pmSelectChar: TPopupMenu
     Left = 88
     Top = 88
@@ -1034,6 +1099,10 @@ object FTXTDialog: TFTXTDialog
     object miSetAsDateTime: TMenuItem
       Caption = 'Date/Time'
       OnClick = miSetAsDateTimeClick
+    end
+    object miSetAsHeaderValue: TMenuItem
+      Caption = 'Header value (text before a number)'
+      OnClick = miSetAsHeaderValueClick
     end
   end
 end

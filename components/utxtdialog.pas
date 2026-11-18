@@ -8,7 +8,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   ExtCtrls, Grids, Buttons, Spin, IniFiles, Menus, uSciReader, Math,
-  DividerBevel;
+  DividerBevel, ValEdit;
 
 type
   TSciReaderDlgOption = (srdDateTimeReading, srdAutoSaveConfig, srdShowFormulas);
@@ -81,6 +81,11 @@ type
     lblError: TLabel;
     lblFormulaError: TLabel;
     miSetAsDateTime: TMenuItem;
+    miSetAsHeaderValue: TMenuItem;
+    pnHeaderOptions: TPanel;
+    HeaderVarsLbl: TLabel;
+    lblHeaderValues: TLabel;
+    vleHeaderVars: TValueListEditor;
     pnDatTimOptions: TPanel;
     pnFormulaOptions: TPanel;
     dvFormula: TDividerBevel;
@@ -134,6 +139,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure miSetAsDateTimeClick(Sender: TObject);
+    procedure miSetAsHeaderValueClick(Sender: TObject);
+    procedure vleHeaderVarsEditingDone(Sender: TObject);
     procedure mmSourceKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure mmSourceMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure txtHeaderChange(Sender: TObject);
@@ -216,6 +223,7 @@ type
 
     procedure PosToLineCol(APos: Integer; out ALine, ACol: Integer);
     procedure UpdateFormulaError;
+    procedure UpdateHeaderValues;
   public
     { public declarations }
 
@@ -465,6 +473,9 @@ begin
   pnDatTimOptions.Visible := (srdDateTimeReading in Value);
   miSetAsDateTime.Visible := (srdDateTimeReading in Value);
   pnFormulaOptions.Visible := (srdShowFormulas in Value);
+  // Header values are only used inside formulas
+  pnHeaderOptions.Visible := (srdShowFormulas in Value);
+  miSetAsHeaderValue.Visible := (srdShowFormulas in Value);
 end;
 
 function TFTXTDialog.GetOptions: TTXTOptions;
@@ -488,6 +499,7 @@ begin
   FOptionsView.DateTimeLength := DateTimeLength;
   FOptionsView.DateTimeFormat := DateTimeFormat;
   FOptionsView.FileDateFallback := chbFileDateFallback.Checked;
+  FOptionsView.HeaderVars := vleHeaderVars.Strings;
   Result := FOptionsView;
 end;
 
@@ -781,6 +793,7 @@ begin
     DateTimeLength := Value.DateTimeLength;
     DateTimeFormat := Value.DateTimeFormat;
     chbFileDateFallback.Checked := Value.FileDateFallback;
+    vleHeaderVars.Strings.Assign(Value.HeaderVars);
   finally
     FUpdating := False;
   end;
@@ -1035,6 +1048,7 @@ begin
   DateTimeLength := 0;
   DateTimeFormat := 'dd/mm/yyyy, hh:nn:ss';
   chbFileDateFallback.Checked := True;
+  vleHeaderVars.Strings.Clear;
   FUpdating := False;
   RefreshView;
 end;
@@ -1055,6 +1069,34 @@ begin
   DateTimeCol := ACol;
   DateTimeLength := mmSource.SelLength;
 
+  RefreshView;
+end;
+
+// The selected text becomes the key of a new header value
+procedure TFTXTDialog.miSetAsHeaderValueClick(Sender: TObject);
+var
+  Key, AName: String;
+  k: Integer;
+begin
+  Key := Trim(mmSource.SelText);
+  if (Key = '') or (Pos(#10, Key) > 0) or (Pos(#13, Key) > 0) then
+  begin
+    ShowMessage('Select the text that precedes the value, on a single line.');
+    Exit;
+  end;
+
+  // First free default name: H1, H2, ...
+  k := 1;
+  while vleHeaderVars.Strings.IndexOfName('H' + IntToStr(k)) >= 0 do
+    Inc(k);
+  AName := 'H' + IntToStr(k);
+
+  vleHeaderVars.InsertRow(AName, Key, True);
+  RefreshView;
+end;
+
+procedure TFTXTDialog.vleHeaderVarsEditingDone(Sender: TObject);
+begin
   RefreshView;
 end;
 
@@ -1138,6 +1180,7 @@ begin
     FPreviewReader.Options.DateTimeLength := DateTimeLength;
     FPreviewReader.Options.DateTimeFormat := DateTimeFormat;
     FPreviewReader.Options.FileDateFallback := chbFileDateFallback.Checked;
+    FPreviewReader.Options.HeaderVars := vleHeaderVars.Strings;
 
     // Load string data directly into the preview
     FPreviewReader.LoadFromString(mmSource.Text);
@@ -1172,6 +1215,7 @@ begin
       lblError.Caption := '';
 
     UpdateFormulaError;
+    UpdateHeaderValues;
 
     UpdateView;
   end;
@@ -1209,6 +1253,21 @@ begin
   end;
 end;
 
+// Values found in the preview, e.g. 'INT = 100000'
+procedure TFTXTDialog.UpdateHeaderValues;
+var
+  i: Integer;
+  S: String;
+begin
+  S := '';
+  for i := 0 to FPreviewReader.HeaderCount - 1 do
+  begin
+    if S <> '' then S := S + ';  ';
+    S := S + Format('%s = %g', [FPreviewReader.HeaderNames[i], FPreviewReader.HeaderValues[i]]);
+  end;
+  lblHeaderValues.Caption := S;
+end;
+
 function TFTXTDialog.Execute: Boolean;
 var
   ConfigDir: TFileName;
@@ -1234,6 +1293,7 @@ procedure TFTXTDialog.SaveDirPreferences(DirectoryName: TFileName);
 var
   Ini: TIniFile;
   FName : TFileName;
+  i: Integer;
 begin
   if Assigned(FOpenDialog) then
     FOpenDialog.InitialDir := DirectoryName;
@@ -1262,6 +1322,12 @@ begin
       Ini.WriteInteger('TXTOptions', 'DateTimeLength', Options.DateTimeLength);
       Ini.WriteString('TXTOptions', 'DateTimeFormat', Options.DateTimeFormat);
       Ini.WriteBool('TXTOptions', 'FileDateFallback', Options.FileDateFallback);
+      // One Name=Text line per header value
+      Ini.EraseSection('HeaderValues');
+      for i := 0 to Options.HeaderVars.Count - 1 do
+        if Trim(Options.HeaderVars.Names[i]) <> '' then
+          Ini.WriteString('HeaderValues', Trim(Options.HeaderVars.Names[i]),
+                          Options.HeaderVars.ValueFromIndex[i]);
     finally
       Ini.Free;
     end;
@@ -1274,6 +1340,7 @@ procedure TFTXTDialog.RestoreDirPreferences(DirectoryName: TFileName);
 var
   Ini: TIniFile;
   FName : TFileName;
+  HeaderList: TStringList;
 begin
   if Assigned(FOpenDialog) then
     FOpenDialog.InitialDir := DirectoryName;
@@ -1283,6 +1350,7 @@ begin
   begin
     try
       Ini := TIniFile.Create(FName);
+      HeaderList := TStringList.Create;
       FUpdating := True;
       try
         //Restore TXT options
@@ -1305,8 +1373,12 @@ begin
         DateTimeLength := Ini.ReadInteger('TXTOptions', 'DateTimeLength', 0);
         DateTimeFormat := Ini.ReadString('TXTOptions', 'DateTimeFormat', 'dd/mm/yyyy, hh:nn:ss');
         chbFileDateFallback.Checked := Ini.ReadBool('TXTOptions', 'FileDateFallback', True);
+        HeaderList.Clear;
+        Ini.ReadSectionValues('HeaderValues', HeaderList);
+        vleHeaderVars.Strings.Assign(HeaderList);
       finally
         FUpdating := False;
+        HeaderList.Free;
         Ini.Free;
       end;
       RefreshView;
