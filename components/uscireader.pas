@@ -31,6 +31,7 @@ type
     FDateTimeCol: Integer;
     FDateTimeLength: Integer;
     FDateTimeFormat: String;
+    FFileDateFallback: Boolean;
   public
     constructor Create;
     procedure Assign(Source: TPersistent); override;
@@ -48,6 +49,8 @@ type
     property DateTimeCol: Integer read FDateTimeCol write FDateTimeCol;
     property DateTimeLength: Integer read FDateTimeLength write FDateTimeLength;
     property DateTimeFormat: String read FDateTimeFormat write FDateTimeFormat;
+    // Use the file modification time when no date is set or found in the file
+    property FileDateFallback: Boolean read FFileDateFallback write FFileDateFallback;
   published
     property Delimiter: Char read FDelimiter write FDelimiter default ' ';
     property Comment: Char read FComment write FComment default '#';
@@ -65,6 +68,7 @@ type
     FOptions: TTXTOptions;
     FLines: TStringList;
     FErrors: TStringList;
+    FSourceFileName: String;
 
     FXFormulaObj: TFormula;
     FYFormulaObj: TFormula;
@@ -103,6 +107,8 @@ type
 
     property Errors: TStringList read FErrors;
     property HasErrors: Boolean read GetHasErrors;
+    // File the text came from; used by FileDate when FileDateFallback is set
+    property SourceFileName: String read FSourceFileName write FSourceFileName;
   published
     property Options: TTXTOptions read FOptions write SetOptions;
   end;
@@ -158,6 +164,7 @@ begin
   FDateTimeCol := 0;
   FDateTimeLength := 0;
   FDateTimeFormat := 'dd/mm/yyyy, hh:nn:ss';
+  FFileDateFallback := True;
 end;
 
 procedure TTXTOptions.Assign(Source: TPersistent);
@@ -185,6 +192,7 @@ begin
     FDateTimeCol := Src.FDateTimeCol;
     FDateTimeLength := Src.FDateTimeLength;
     FDateTimeFormat := Src.FDateTimeFormat;
+    FFileDateFallback := Src.FFileDateFallback;
   end
   else
     inherited Assign(Source);
@@ -210,7 +218,8 @@ begin
             (FDateTimeLine = Other.FDateTimeLine) and
             (FDateTimeCol = Other.FDateTimeCol) and
             (FDateTimeLength = Other.FDateTimeLength) and
-            (FDateTimeFormat = Other.FDateTimeFormat);
+            (FDateTimeFormat = Other.FDateTimeFormat) and
+            (FFileDateFallback = Other.FFileDateFallback);
 end;
 
 { TSciReader }
@@ -247,6 +256,7 @@ begin
   FMaxColCount := 0;
   FLines.Clear;
   FErrors.Clear;
+  FSourceFileName := '';
   // Recompile formulas on every load
   FreeAndNil(FXFormulaObj);
   FreeAndNil(FYFormulaObj);
@@ -409,6 +419,7 @@ begin
     try
       sl.LoadFromFile(AFileName);
       LoadFromString(sl.DataString);
+      FSourceFileName := AFileName;
     except
       on E: Exception do
       begin
@@ -496,23 +507,35 @@ function TSciReader.FileDate: TDateTime;
 var
   ValueStr: String;
   FS: TFormatSettings;
+  Age: Int64;
 begin
   Result := 0;
 
-  if (FOptions.DateTimeLength <= 0) or (Trim(FOptions.DateTimeFormat) = '') then Exit;
-  if (FOptions.DateTimeLine < 0) or (FOptions.DateTimeLine >= FLines.Count) then Exit;
+  // Date/time written inside the file, when configured
+  if (FOptions.DateTimeLength > 0) and (Trim(FOptions.DateTimeFormat) <> '') and
+     (FOptions.DateTimeLine >= 0) and (FOptions.DateTimeLine < FLines.Count) then
+  begin
+    ValueStr := Copy(FLines[FOptions.DateTimeLine], FOptions.DateTimeCol + 1, FOptions.DateTimeLength);
+    if Trim(ValueStr) <> '' then
+    begin
+      FS := DefaultFormatSettings;
+      FS.DateSeparator := FOptions.DateSeparator;
+      FS.TimeSeparator := FOptions.TimeSeparator;
 
-  ValueStr := Copy(FLines[FOptions.DateTimeLine], FOptions.DateTimeCol + 1, FOptions.DateTimeLength);
-  if Trim(ValueStr) = '' then Exit;
+      try
+        Result := ScanDateTime(FOptions.DateTimeFormat, ValueStr, FS);
+      except
+        Result := 0;
+      end;
+    end;
+  end;
 
-  FS := DefaultFormatSettings;
-  FS.DateSeparator := FOptions.DateSeparator;
-  FS.TimeSeparator := FOptions.TimeSeparator;
-
-  try
-    Result := ScanDateTime(FOptions.DateTimeFormat, ValueStr, FS);
-  except
-    Result := 0;
+  // Otherwise the modification time of the file (same call on every platform)
+  if (Result = 0) and FOptions.FileDateFallback and (FSourceFileName <> '') then
+  begin
+    Age := FileAge(FSourceFileName);
+    if Age <> -1 then
+      Result := FileDateToDateTime(Age);
   end;
 end;
 

@@ -67,6 +67,7 @@ type
     btnMenu: TBitBtn;
     btnRefresh: TBitBtn;
     cbbDate: TComboBox;
+    chbFileDateFallback: TCheckBox;
     cbbThousand: TComboBox;
     cbbDelimiter: TComboBox;
     cbbComment: TComboBox;
@@ -129,6 +130,7 @@ type
     procedure cbbDelimiterChange(Sender: TObject);
     procedure cbbQuotationChange(Sender: TObject);
     procedure cbbThousandChange(Sender: TObject);
+    procedure chbFileDateFallbackChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure miSetAsDateTimeClick(Sender: TObject);
@@ -485,6 +487,7 @@ begin
   FOptionsView.DateTimeCol := DateTimeCol;
   FOptionsView.DateTimeLength := DateTimeLength;
   FOptionsView.DateTimeFormat := DateTimeFormat;
+  FOptionsView.FileDateFallback := chbFileDateFallback.Checked;
   Result := FOptionsView;
 end;
 
@@ -777,6 +780,7 @@ begin
     DateTimeCol := Value.DateTimeCol;
     DateTimeLength := Value.DateTimeLength;
     DateTimeFormat := Value.DateTimeFormat;
+    chbFileDateFallback.Checked := Value.FileDateFallback;
   finally
     FUpdating := False;
   end;
@@ -975,6 +979,11 @@ begin
   RefreshView;
 end;
 
+procedure TFTXTDialog.chbFileDateFallbackChange(Sender: TObject);
+begin
+  RefreshView;
+end;
+
 constructor TFTXTDialog.Create(TheOwner: TComponent);
 begin
   FCharOptions := TCharListOptions.Create;
@@ -1025,6 +1034,7 @@ begin
   DateTimeCol := 0;
   DateTimeLength := 0;
   DateTimeFormat := 'dd/mm/yyyy, hh:nn:ss';
+  chbFileDateFallback.Checked := True;
   FUpdating := False;
   RefreshView;
 end;
@@ -1127,9 +1137,11 @@ begin
     FPreviewReader.Options.DateTimeCol := DateTimeCol;
     FPreviewReader.Options.DateTimeLength := DateTimeLength;
     FPreviewReader.Options.DateTimeFormat := DateTimeFormat;
+    FPreviewReader.Options.FileDateFallback := chbFileDateFallback.Checked;
 
     // Load string data directly into the preview
     FPreviewReader.LoadFromString(mmSource.Text);
+    FPreviewReader.SourceFileName := FFileName;
 
     cbbXCol.Items.Clear;
     cbbYCol.Items.Clear;
@@ -1249,6 +1261,7 @@ begin
       Ini.WriteInteger('TXTOptions', 'DateTimeCol', Options.DateTimeCol);
       Ini.WriteInteger('TXTOptions', 'DateTimeLength', Options.DateTimeLength);
       Ini.WriteString('TXTOptions', 'DateTimeFormat', Options.DateTimeFormat);
+      Ini.WriteBool('TXTOptions', 'FileDateFallback', Options.FileDateFallback);
     finally
       Ini.Free;
     end;
@@ -1291,6 +1304,7 @@ begin
         DateTimeCol := Ini.ReadInteger('TXTOptions', 'DateTimeCol', 0);
         DateTimeLength := Ini.ReadInteger('TXTOptions', 'DateTimeLength', 0);
         DateTimeFormat := Ini.ReadString('TXTOptions', 'DateTimeFormat', 'dd/mm/yyyy, hh:nn:ss');
+        chbFileDateFallback.Checked := Ini.ReadBool('TXTOptions', 'FileDateFallback', True);
       finally
         FUpdating := False;
         Ini.Free;

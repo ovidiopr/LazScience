@@ -980,6 +980,25 @@ object FTXTDialog: TFTXTDialog
       TabOrder = 3
       OnClick = btnResetDateTimeClick
     end
+    object chbFileDateFallback: TCheckBox
+      AnchorSideLeft.Control = btnResetDateTime
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = btnResetDateTime
+      AnchorSideTop.Side = asrCenter
+      Left = 664
+      Height = 19
+      Hint = 'Use the modification date of the file when no date is set or found in it'
+      Top = 7
+      Width = 190
+      BorderSpacing.Left = 10
+      Caption = 'Use file date if none found'
+      Checked = True
+      ParentShowHint = False
+      ShowHint = True
+      State = cbChecked
+      TabOrder = 4
+      OnChange = chbFileDateFallbackChange
+    end
   end
   object pmSelectChar: TPopupMenu
     Left = 88
