@@ -68,6 +68,8 @@ type
 
     FXFormulaObj: TFormula;
     FYFormulaObj: TFormula;
+    FXErrorShown: Boolean;
+    FYErrorShown: Boolean;
 
     function GetCell(ACol, ARow: Integer): String;
     function GetValue(ACol, ARow: Integer): Double;
@@ -248,6 +250,8 @@ begin
   // Recompile formulas on every load
   FreeAndNil(FXFormulaObj);
   FreeAndNil(FYFormulaObj);
+  FXErrorShown := False;
+  FYErrorShown := False;
 end;
 
 function TSciReader.GetHasErrors: Boolean;
@@ -330,7 +334,10 @@ begin
   F := EnsureXFormula;
   if not F.Valid then
   begin
-    FErrors.Add('X Formula error: ' + F.ErrorMessage);
+    // Report once per load, not once per row
+    if not FXErrorShown then
+      FErrors.Add('X Formula error: ' + F.ErrorMessage);
+    FXErrorShown := True;
     Result := 0.0;
     Exit;
   end;
@@ -363,7 +370,10 @@ begin
   F := EnsureYFormula;
   if not F.Valid then
   begin
-    FErrors.Add('Y Formula error: ' + F.ErrorMessage);
+    // Report once per load, not once per row
+    if not FYErrorShown then
+      FErrors.Add('Y Formula error: ' + F.ErrorMessage);
+    FYErrorShown := True;
     Result := 0.0;
     Exit;
   end;
