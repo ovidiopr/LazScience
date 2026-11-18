@@ -795,7 +795,7 @@ function TSciReader.FileDate: TDateTime;
 var
   ValueStr: String;
   FS: TFormatSettings;
-  Age: Int64;
+  Age: TDateTime;
 begin
   Result := 0;
 
@@ -820,11 +820,8 @@ begin
 
   // Otherwise the modification time of the file (same call on every platform)
   if (Result = 0) and FOptions.FileDateFallback and (FSourceFileName <> '') then
-  begin
-    Age := FileAge(FSourceFileName);
-    if Age <> -1 then
-      Result := FileDateToDateTime(Age);
-  end;
+    if FileAge(FSourceFileName, Age) then
+      Result := Age;
 end;
 
 initialization
